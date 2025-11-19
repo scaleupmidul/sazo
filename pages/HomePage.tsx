@@ -41,10 +41,16 @@ const HomePage: React.FC = () => {
     return category ? category.image : 'https://picsum.photos/seed/sazo-default-category/600/800';
   };
 
-  const allNewArrivals = products.filter(p => p.isNewArrival);
-  const allTrendingProducts = products.filter(p => p.isTrending);
+  // Explicitly sort products by displayOrder on the frontend to ensure consistency 
+  // (even if backend order differs slightly due to pagination or other factors).
+  const allNewArrivals = products
+    .filter(p => p.isNewArrival)
+    .sort((a, b) => (a.displayOrder || 1000) - (b.displayOrder || 1000));
+    
+  const allTrendingProducts = products
+    .filter(p => p.isTrending)
+    .sort((a, b) => (a.displayOrder || 1000) - (b.displayOrder || 1000));
   
-  // Products are already sorted by displayOrder from the backend API
   const newArrivalsDisplay = allNewArrivals.slice(0, homepageNewArrivalsCount || 4);
   const trendingProductsDisplay = allTrendingProducts.slice(0, homepageTrendingCount || 4);
 
