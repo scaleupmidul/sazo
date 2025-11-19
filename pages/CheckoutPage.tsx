@@ -357,10 +357,10 @@ const CheckoutPage: React.FC = () => {
               <span>৳{shippingCharge.toLocaleString('en-IN')}</span>
             </div>
           </div>
-          {/* UPDATED: Reduced font size to text-xl sm:text-2xl to prevent overlapping */}
-          <div className="mt-6 flex justify-between items-center">
+          
+          <div className="mt-6 p-4 bg-stone-50 rounded-lg border border-stone-200 flex justify-between items-center shadow-sm">
             <span className="text-lg font-bold text-stone-900">Total Payable</span>
-            <span className="text-xl sm:text-2xl font-extrabold text-pink-600">৳{totalPayable.toLocaleString('en-IN')}</span>
+            <span className="text-2xl font-extrabold text-pink-600">৳{totalPayable.toLocaleString('en-IN')}</span>
           </div>
         </div>
 
