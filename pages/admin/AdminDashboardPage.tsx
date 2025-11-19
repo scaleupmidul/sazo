@@ -63,7 +63,7 @@ const AdminDashboardPage: React.FC = () => {
                             <tbody>
                                 {recentOrders.map(order => (
                                     <tr key={order.id} className="bg-white border-b hover:bg-gray-50 cursor-pointer" onClick={() => navigate('/admin/orders')}>
-                                        <td className="px-6 py-4 font-medium text-gray-900">#{order.orderId || order.id}</td>
+                                        <td className="px-6 py-4 font-medium text-gray-900">{order.orderId || order.id}</td>
                                         <td className="px-6 py-4">{order.customerName}</td>
                                         <td className="px-6 py-4">৳{order.total.toLocaleString()}</td>
                                         <td className="px-6 py-4">
@@ -92,7 +92,7 @@ const AdminDashboardPage: React.FC = () => {
                             <tbody>
                                 {recentPaymentRecords.map(order => (
                                     <tr key={order.id} className="bg-white border-b hover:bg-gray-50 cursor-pointer" onClick={() => navigate('/admin/payment-info')}>
-                                        <td className="px-6 py-4 font-medium text-gray-900">#{order.orderId || order.id}</td>
+                                        <td className="px-6 py-4 font-medium text-gray-900">{order.orderId || order.id}</td>
                                         <td className="px-6 py-4">{order.customerName}</td>
                                         <td className="px-6 py-4 font-semibold">৳{order.paymentDetails?.amount.toLocaleString()}</td>
                                         <td className="px-6 py-4 truncate max-w-xs font-mono text-xs">{order.paymentDetails?.transactionId}</td>
