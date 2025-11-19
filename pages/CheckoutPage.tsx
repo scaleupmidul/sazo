@@ -25,10 +25,10 @@ const CheckoutPageSkeleton: React.FC = () => (
         {/* Page Title Box */}
         <div className="h-10 bg-stone-200 rounded w-48 mx-auto mb-8"></div>
         
-        <div className="flex flex-col lg:grid lg:grid-cols-3 lg:gap-8">
+        <div className="flex flex-col lg:grid lg:grid-cols-5 lg:gap-8">
             
-            {/* Order Summary Skeleton (Right Column) */}
-            <div className="lg:col-span-1 h-fit order-1 lg:order-2 mb-8 lg:mb-0">
+            {/* Order Summary Skeleton (Right Column) - Wider (2/5) */}
+            <div className="lg:col-span-2 h-fit order-1 lg:order-2 mb-8 lg:mb-0">
                 <div className="h-7 bg-stone-200 rounded w-1/2 mb-6"></div>
                 <div className="space-y-4">
                     {/* Item Skeletons */}
@@ -60,8 +60,8 @@ const CheckoutPageSkeleton: React.FC = () => (
                 </div>
             </div>
 
-            {/* Form Skeleton (Left Column) */}
-            <div className="lg:col-span-2 space-y-8 order-2 lg:order-1">
+            {/* Form Skeleton (Left Column) - (3/5) */}
+            <div className="lg:col-span-3 space-y-8 order-2 lg:order-1">
                 {/* Shipping Info Section */}
                 <div>
                     <div className="h-7 bg-stone-200 rounded w-1/3 mb-6 pb-2"></div>
@@ -319,10 +319,12 @@ const CheckoutPage: React.FC = () => {
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 pb-16">
       <h2 className="text-3xl sm:text-4xl font-bold text-stone-900 mb-8 text-center">Checkout</h2>
-      <div className="flex flex-col lg:grid lg:grid-cols-3 lg:gap-8">
+      
+      {/* UPDATED GRID: lg:grid-cols-5 gives Order Summary 40% width (2 cols) and Form 60% width (3 cols) */}
+      <div className="flex flex-col lg:grid lg:grid-cols-5 lg:gap-8">
         
-        {/* Order Summary Column */}
-        <div className="lg:col-span-1 bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-stone-200 lg:sticky top-24 h-fit order-1 lg:order-2 mb-6 lg:mb-0">
+        {/* Order Summary Column (Wider - 2 columns) */}
+        <div className="lg:col-span-2 bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-stone-200 lg:sticky top-24 h-fit order-1 lg:order-2 mb-6 lg:mb-0">
           <h3 className="text-xl font-bold text-stone-900 mb-4 sm:mb-6">Order Summary</h3>
           
           {/* Cart Items List - Scrollable on mobile to save space */}
@@ -355,14 +357,15 @@ const CheckoutPage: React.FC = () => {
               <span>৳{shippingCharge.toLocaleString('en-IN')}</span>
             </div>
           </div>
-          <div className="mt-4 flex justify-between items-center">
-            <span className="text-lg font-bold text-stone-900">Total Payable</span>
-            <span className="text-xl sm:text-2xl font-extrabold text-pink-600">৳{totalPayable.toLocaleString('en-IN')}</span>
+          {/* UPDATED: Larger font size for Total Payable */}
+          <div className="mt-6 flex justify-between items-center">
+            <span className="text-xl font-bold text-stone-900">Total Payable</span>
+            <span className="text-2xl sm:text-3xl font-extrabold text-pink-600">৳{totalPayable.toLocaleString('en-IN')}</span>
           </div>
         </div>
 
-        {/* Checkout Form Column */}
-        <form onSubmit={handleSubmit} className="lg:col-span-2 space-y-6 bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-stone-200 order-2 lg:order-1">
+        {/* Checkout Form Column (3 columns) */}
+        <form onSubmit={handleSubmit} className="lg:col-span-3 space-y-6 bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-stone-200 order-2 lg:order-1">
           <div>
             <h3 className="text-xl font-bold text-pink-600 border-b pb-2 mb-4">Shipping Information</h3>
             <div className="space-y-4">
