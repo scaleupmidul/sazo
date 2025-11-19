@@ -1,6 +1,6 @@
 import React from 'react';
 import { CartItem } from '../types';
-import { ShoppingCart, Truck, XCircle } from 'lucide-react';
+import { ShoppingCart, Truck, XCircle, ArrowLeft } from 'lucide-react';
 import { useAppStore } from '../store';
 
 const CartItemComponent: React.FC<{ item: CartItem, updateCartQuantity: (id: string, size: string, newQuantity: number) => void }> = ({ item, updateCartQuantity }) => (
@@ -93,15 +93,25 @@ const CartPage: React.FC = () => {
               <span>৳{tempShipping}</span>
             </div>
           </div>
-          <div className="border-t-2 border-stone-300 mt-4 pt-4 flex justify-between items-center">
-            <span className="text-lg font-bold text-stone-900">Total Payable</span>
-            <span className="text-xl sm:text-2xl font-extrabold text-pink-600">৳{(cartTotal + tempShipping).toLocaleString('en-IN')}</span>
+          
+          <div className="mt-4 p-3 bg-stone-50 rounded-lg border border-stone-200 flex justify-between items-center shadow-sm">
+            <span className="text-base font-bold text-stone-900">Total Payable</span>
+            <span className="text-xl font-extrabold text-pink-600">৳{(cartTotal + tempShipping).toLocaleString('en-IN')}</span>
           </div>
-          <p className="text-xs text-stone-500 mt-2 text-center">Final shipping charge is calculated at checkout.</p>
-          <button onClick={() => navigate('/checkout')} className="mt-6 w-full bg-pink-600 text-white text-base font-bold px-6 py-3 rounded-full hover:bg-pink-700 transition duration-300 shadow flex items-center justify-center space-x-2 active:scale-95">
-            <Truck className="w-5 h-5" />
-            <span>Proceed to Checkout</span>
-          </button>
+
+          <p className="text-xs text-stone-500 mt-3 text-center">Final shipping charge is calculated at checkout.</p>
+          
+          <div className="mt-6 space-y-3">
+            <button onClick={() => navigate('/checkout')} className="w-full bg-pink-600 text-white text-base font-bold px-6 py-3 rounded-full hover:bg-pink-700 transition duration-300 shadow flex items-center justify-center space-x-2 active:scale-95">
+              <Truck className="w-5 h-5" />
+              <span>Proceed to Checkout</span>
+            </button>
+
+            <button onClick={() => navigate('/shop')} className="w-full bg-white text-stone-600 border border-stone-300 text-base font-bold px-6 py-3 rounded-full hover:bg-stone-50 hover:text-pink-600 transition duration-300 shadow-sm flex items-center justify-center space-x-2 active:scale-95">
+              <ArrowLeft className="w-5 h-5" />
+              <span>Continue Shopping</span>
+            </button>
+          </div>
         </div>
       </div>
     </main>
