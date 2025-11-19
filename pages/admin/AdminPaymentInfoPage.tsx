@@ -66,7 +66,7 @@ const AdminPaymentInfoPage: React.FC = () => {
 
                             return (
                                 <tr key={order.id} className="bg-white border-b hover:bg-gray-50">
-                                    <td className="px-6 py-4 font-medium text-gray-900">#{order.orderId || order.id}</td>
+                                    <td className="px-6 py-4 font-medium text-gray-900">{order.orderId || order.id}</td>
                                     <td className="px-6 py-4">{order.date}</td>
                                     <td className="px-6 py-4">
                                         <div>{order.customerName}</div>
