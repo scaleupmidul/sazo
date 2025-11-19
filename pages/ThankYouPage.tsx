@@ -142,11 +142,11 @@ const ThankYouPage: React.FC<ThankYouPageProps> = ({ orderId }) => {
                         </div>
                         <div>
                             <h2 className="text-lg font-bold text-stone-800">Order Placed Successfully</h2>
-                            <p className="text-stone-600 text-sm">Estimated delivery: 2-4 business days</p>
+                            <p className="text-stone-600 text-sm">Estimated delivery: 2-5 business days</p>
                         </div>
                     </div>
-                    <div className="p-6">
-                        {/* Progress Bar (Visual Only) */}
+                    <div className="p-6 hidden sm:block">
+                        {/* Progress Bar (Visual Only) - Hidden on mobile */}
                         <div className="relative flex items-center justify-between mb-2">
                             <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-stone-100 rounded-full -z-10"></div>
                             <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[15%] h-1 bg-pink-600 rounded-full -z-10"></div>
