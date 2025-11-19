@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { CartItem } from '../types';
 import { ShoppingCart, Truck, XCircle, ArrowLeft } from 'lucide-react';
@@ -35,8 +36,6 @@ const CartPage: React.FC = () => {
     navigate: state.navigate,
     cartTotal: state.cartTotal,
   }));
-
-  const tempShipping = 100;
 
   if (cart.length === 0) {
     return (
@@ -90,13 +89,13 @@ const CartPage: React.FC = () => {
             </div>
             <div className="flex justify-between text-stone-600">
               <span>Shipping (Est.)</span>
-              <span>৳{tempShipping}</span>
+              <span>—</span>
             </div>
           </div>
           
           <div className="mt-4 p-3 bg-stone-50 rounded-lg border border-stone-200 flex justify-between items-center shadow-sm">
             <span className="text-base font-bold text-stone-900">Total Payable</span>
-            <span className="text-xl font-extrabold text-pink-600">৳{(cartTotal + tempShipping).toLocaleString('en-IN')}</span>
+            <span className="text-xl font-extrabold text-pink-600">৳{cartTotal.toLocaleString('en-IN')}</span>
           </div>
 
           <p className="text-xs text-stone-500 mt-3 text-center">Final shipping charge is calculated at checkout.</p>
