@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAppStore } from '../store';
 
@@ -417,7 +418,7 @@ const CheckoutPage: React.FC = () => {
             <div className="space-y-3">
                {safeSettings.codEnabled && (
                   <div 
-                    className={`rounded-lg border transition-all duration-200 overflow-hidden ${formData.paymentMethod === 'COD' ? 'bg-pink-50 border-pink-600' : 'bg-white border-stone-300'}`}
+                    className="rounded-lg border border-stone-300 bg-white transition-all duration-200 overflow-hidden"
                     onClick={() => setFormData(prev => ({ ...prev, paymentMethod: 'COD' }))}
                   >
                     <label className="flex items-start space-x-3 p-4 cursor-pointer">
@@ -431,7 +432,7 @@ const CheckoutPage: React.FC = () => {
                 )}
                 {safeSettings.onlinePaymentEnabled && (
                   <div 
-                    className={`rounded-lg border transition-all duration-200 overflow-hidden ${formData.paymentMethod === 'Online' ? 'bg-pink-50 border-pink-600' : 'bg-white border-stone-300'}`}
+                    className="rounded-lg border border-stone-300 bg-white transition-all duration-200 overflow-hidden"
                     onClick={() => setFormData(prev => ({ ...prev, paymentMethod: 'Online' }))}
                   >
                     <label className="flex items-start space-x-3 p-4 cursor-pointer">
