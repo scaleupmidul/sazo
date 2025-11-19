@@ -358,9 +358,9 @@ const CheckoutPage: React.FC = () => {
             </div>
           </div>
           
-          <div className="mt-6 p-4 bg-stone-50 rounded-lg border border-stone-200 flex justify-between items-center shadow-sm">
-            <span className="text-lg font-bold text-stone-900">Total Payable</span>
-            <span className="text-2xl font-extrabold text-pink-600">৳{totalPayable.toLocaleString('en-IN')}</span>
+          <div className="mt-4 p-3 bg-stone-50 rounded-lg border border-stone-200 flex justify-between items-center shadow-sm">
+            <span className="text-base font-bold text-stone-900">Total Payable</span>
+            <span className="text-xl font-extrabold text-pink-600">৳{totalPayable.toLocaleString('en-IN')}</span>
           </div>
         </div>
 
