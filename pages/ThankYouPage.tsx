@@ -142,7 +142,7 @@ const ThankYouPage: React.FC<ThankYouPageProps> = ({ orderId }) => {
                         </div>
                         <div>
                             <h2 className="text-lg font-bold text-stone-800">Order Placed Successfully</h2>
-                            <p className="text-stone-600 text-sm">Estimated delivery: 2-5 business days</p>
+                            <p className="text-stone-600 text-sm">Estimated delivery: 2-4 business days</p>
                         </div>
                     </div>
                     <div className="p-6">
@@ -205,7 +205,7 @@ const ThankYouPage: React.FC<ThankYouPageProps> = ({ orderId }) => {
                     <div className="flex justify-between items-center mb-6">
                         <h3 className="font-bold text-stone-800">Order Summary</h3>
                         <div className="flex items-center gap-2 bg-stone-100 px-3 py-1 rounded-full cursor-pointer hover:bg-stone-200 transition" onClick={handleCopyOrderId}>
-                            <span className="text-xs font-mono text-stone-600">#{displayOrderId}</span>
+                            <span className="text-xs font-mono text-stone-600">{displayOrderId}</span>
                             <Copy className="w-3 h-3 text-stone-500" />
                         </div>
                     </div>
