@@ -359,7 +359,7 @@ const CheckoutPage: React.FC = () => {
           </div>
           {/* UPDATED: Font sizes for PC version as requested */}
           <div className="mt-6 flex justify-between items-center">
-            <span className="text-lg lg:text-base font-bold text-stone-900">Total Payable</span>
+            <span className="text-lg lg:text-[1rem] font-bold text-stone-900">Total Payable</span>
             <span className="text-xl sm:text-2xl lg:text-[1.222rem] font-extrabold text-pink-600">৳{totalPayable.toLocaleString('en-IN')}</span>
           </div>
         </div>
