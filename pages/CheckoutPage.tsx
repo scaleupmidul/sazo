@@ -339,7 +339,8 @@ const CheckoutPage: React.FC = () => {
               <span>৳{safeCartTotal.toLocaleString('en-IN')}</span>
             </div>
             <div className="flex justify-between text-stone-600 border-b border-stone-200 pb-4">
-              <span className="font-semibold w-2/3">Shipping ({selectedShippingOption?.label || 'Not selected'})</span>
+              {/* Added truncate to prevent layout shift when shipping text is long */}
+              <span className="font-semibold w-2/3 truncate">Shipping ({selectedShippingOption?.label || 'Not selected'})</span>
               <span>৳{shippingCharge.toLocaleString('en-IN')}</span>
             </div>
           </div>
@@ -367,15 +368,27 @@ const CheckoutPage: React.FC = () => {
             <div className="space-y-3">
               {safeSettings.shippingOptions.length > 0 ? safeSettings.shippingOptions.map((option) => {
                  if (!option || !option.id) return null; // Skip invalid options to prevent crash
+                 const isSelected = formData.shippingOptionId === option.id;
                  return (
-                    <div key={option.id} className="p-4 bg-white rounded-lg border border-stone-300">
-                      <label className="flex items-center justify-between cursor-pointer">
+                    <div 
+                        key={option.id} 
+                        onClick={() => setFormData(prev => ({ ...prev, shippingOptionId: option.id }))}
+                        className={`p-4 rounded-lg border cursor-pointer transition-all duration-200 ${isSelected ? 'bg-pink-50 border-pink-600' : 'bg-white border-stone-300 hover:border-pink-300'}`}
+                    >
+                      <div className="flex items-center justify-between pointer-events-none">
                         <span className="flex items-center space-x-3">
-                          <input type="radio" name="shippingOptionId" value={option.id} checked={formData.shippingOptionId === option.id} onChange={handleChange} className="form-radio h-5 w-5 text-pink-600 focus:ring-pink-600" />
-                          <span className="font-semibold text-stone-700 text-sm">{option.label || 'Standard Shipping'}</span>
+                          <input 
+                            type="radio" 
+                            name="shippingOptionId" 
+                            value={option.id} 
+                            checked={isSelected} 
+                            onChange={() => {}} // Handled by parent div
+                            className="form-radio h-5 w-5 text-pink-600 focus:ring-pink-600" 
+                          />
+                          <span className={`font-semibold text-sm ${isSelected ? 'text-pink-900' : 'text-stone-700'}`}>{option.label || 'Standard Shipping'}</span>
                         </span>
-                        <span className="font-bold text-stone-900 text-sm">{(option.charge || 0).toLocaleString('en-IN')} ৳</span>
-                      </label>
+                        <span className={`font-bold text-sm ${isSelected ? 'text-pink-700' : 'text-stone-900'}`}>{(option.charge || 0).toLocaleString('en-IN')} ৳</span>
+                      </div>
                     </div>
                  );
               }) : (
@@ -390,27 +403,47 @@ const CheckoutPage: React.FC = () => {
             <h3 className="text-xl font-bold text-pink-600 border-b pb-2 mb-4 pt-4">Payment Method</h3>
             <div className="space-y-3">
                {safeSettings.codEnabled && (
-                  <div className="p-4 bg-white rounded-lg border border-stone-300">
-                    <label className="flex items-center space-x-3 cursor-pointer">
-                      <input type="radio" name="paymentMethod" value="COD" checked={formData.paymentMethod === 'COD'} onChange={handleChange} className="form-radio h-5 w-5 text-pink-600 focus:ring-pink-600" />
+                  <div 
+                    onClick={() => setFormData(prev => ({ ...prev, paymentMethod: 'COD' }))}
+                    className={`p-4 rounded-lg border cursor-pointer transition-all duration-200 ${formData.paymentMethod === 'COD' ? 'bg-pink-50 border-pink-600' : 'bg-white border-stone-300 hover:border-pink-300'}`}
+                  >
+                    <div className="flex items-center space-x-3 pointer-events-none">
+                      <input 
+                        type="radio" 
+                        name="paymentMethod" 
+                        value="COD" 
+                        checked={formData.paymentMethod === 'COD'} 
+                        onChange={() => {}}
+                        className="form-radio h-5 w-5 text-pink-600 focus:ring-pink-600" 
+                      />
                       <div>
-                        <span className="font-semibold text-stone-700 text-sm">Cash on Delivery (COD)</span>
+                        <span className={`font-semibold text-sm ${formData.paymentMethod === 'COD' ? 'text-pink-900' : 'text-stone-700'}`}>Cash on Delivery (COD)</span>
                         <p className="text-xs text-stone-500">Pay upon receiving the product</p>
                       </div>
-                    </label>
+                    </div>
                   </div>
                 )}
                 {safeSettings.onlinePaymentEnabled && (
-                  <div className="p-4 bg-white rounded-lg border border-stone-300">
-                    <label className="flex items-center space-x-3 cursor-pointer">
-                      <input type="radio" name="paymentMethod" value="Online" checked={formData.paymentMethod === 'Online'} onChange={handleChange} className="form-radio h-5 w-5 text-pink-600 focus:ring-pink-600" />
+                  <div 
+                    onClick={() => setFormData(prev => ({ ...prev, paymentMethod: 'Online' }))}
+                    className={`p-4 rounded-lg border cursor-pointer transition-all duration-200 ${formData.paymentMethod === 'Online' ? 'bg-pink-50 border-pink-600' : 'bg-white border-stone-300 hover:border-pink-300'}`}
+                  >
+                    <div className="flex items-center space-x-3 pointer-events-none">
+                      <input 
+                        type="radio" 
+                        name="paymentMethod" 
+                        value="Online" 
+                        checked={formData.paymentMethod === 'Online'} 
+                        onChange={() => {}}
+                        className="form-radio h-5 w-5 text-pink-600 focus:ring-pink-600" 
+                      />
                        <div>
-                         <span className="font-semibold text-stone-700 text-sm">Online Payment</span>
+                         <span className={`font-semibold text-sm ${formData.paymentMethod === 'Online' ? 'text-pink-900' : 'text-stone-700'}`}>Online Payment</span>
                          {safeOnlinePaymentMethods.length > 0 && (
                             <p className="text-xs text-stone-500">{safeOnlinePaymentMethods.join(' / ')}</p>
                          )}
                        </div>
-                    </label>
+                    </div>
                   </div>
                 )}
                  {noPaymentMethodAvailable && (
@@ -422,7 +455,8 @@ const CheckoutPage: React.FC = () => {
           </div>
             
           {formData.paymentMethod === 'Online' && safeSettings.onlinePaymentEnabled && (
-            <div className="mt-6 pt-6 border-t border-stone-200 animate-scaleIn bg-pink-50/50 rounded-xl shadow-inner">
+            // Removed animate-scaleIn for stability
+            <div className="mt-6 pt-6 border-t border-stone-200 bg-pink-50/50 rounded-xl shadow-inner">
               <div className="text-center py-3 px-4 sm:p-4 bg-pink-100 sm:rounded-lg text-stone-800">
                 <SafeHTML 
                     content={formattedPaymentInfo} 
