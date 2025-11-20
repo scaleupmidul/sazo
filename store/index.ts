@@ -1,471 +1,144 @@
-import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import { AppState, Product, CartItem, Order, OrderStatus, ContactMessage, AppSettings, AdminProductsResponse } from '../types';
 
-const API_URL = '/api';
 
-const getTokenFromStorage = (): string | null => {
-    return localStorage.getItem('sazo_admin_token');
-};
+import React, { useEffect } from 'react';
+import { CartItem } from '../types';
+import { ShoppingCart, Truck, XCircle, ArrowLeft } from 'lucide-react';
+import { useAppStore } from '../store';
 
-const DEFAULT_SETTINGS: AppSettings = {
-    onlinePaymentInfo: '',
-    onlinePaymentInfoStyles: { fontSize: '0.875rem' },
-    codEnabled: true, onlinePaymentEnabled: true, onlinePaymentMethods: [],
-    sliderImages: [], categoryImages: [], categories: [], shippingOptions: [], productPagePromoImage: '',
-    contactAddress: '', contactPhone: '', contactEmail: '', whatsappNumber: '', showWhatsAppButton: false,
-    showCityField: true,
-    socialMediaLinks: [], privacyPolicy: '', adminEmail: '', adminPassword: '', footerDescription: '',
-    homepageNewArrivalsCount: 4, homepageTrendingCount: 4
-};
-
-export const useAppStore = create<AppState>()(
-  persist(
-    (set, get) => ({
-        path: window.location.pathname,
-        products: [],
-        orders: [],
-        contactMessages: [],
-        settings: DEFAULT_SETTINGS,
-        cart: [],
-        selectedProduct: null,
-        notification: null,
-        loading: true,
-        isAdminAuthenticated: !!getTokenFromStorage(),
-        cartTotal: 0,
-        fullProductsLoaded: false,
-        adminProducts: [],
-        adminProductsPagination: { page: 1, pages: 1, total: 0 },
-        
-        navigate: (newPath: string) => {
-            if (window.location.pathname !== newPath) {
-                window.history.pushState({}, '', newPath);
-            }
-            set({ path: newPath });
-            window.scrollTo(0, 0);
-        },
-
-        loadInitialData: async () => {
-            set({ loading: true });
-            const { isAdminAuthenticated, notify } = get();
-            try {
-                // Fetch optimized homepage data first for a fast initial load
-                const homeDataRes = await fetch(`${API_URL}/page-data/home`);
-                if (!homeDataRes.ok) {
-                    throw new Error('Failed to fetch initial page data.');
-                }
-                const homeData = await homeDataRes.json();
-                set({
-                    products: homeData.products,
-                    settings: homeData.settings,
-                    fullProductsLoaded: false,
-                });
-
-                // If admin is logged in, fetch admin-specific data
-                if (isAdminAuthenticated) {
-                    const token = getTokenFromStorage();
-                    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-                    const [ordersRes, messagesRes] = await Promise.all([
-                        fetch(`${API_URL}/orders`, { headers }),
-                        fetch(`${API_URL}/messages`, { headers })
-                    ]);
-
-                    if (!ordersRes.ok || !messagesRes.ok) {
-                        throw new Error('Failed to fetch admin data.');
-                    }
-
-                    const ordersData = await ordersRes.json();
-                    const messagesData = await messagesRes.json();
-                    set({ orders: ordersData, contactMessages: messagesData });
-                }
-            } catch (error) {
-                console.error("Failed to load initial data", error);
-                notify("Could not connect to the server.", "error");
-            } finally {
-                set({ loading: false });
-                // After the initial UI render is unblocked, start fetching the rest of the products in the background.
-                // This pre-fetching makes navigating to the Shop page feel instantaneous.
-                setTimeout(() => {
-                    get().ensureAllProductsLoaded();
-                }, 100);
-            }
-        },
-
-        ensureAllProductsLoaded: async () => {
-            const { fullProductsLoaded, products: existingProducts, notify } = get();
-            if (fullProductsLoaded) return;
-    
-            try {
-                const res = await fetch(`${API_URL}/products`);
-                if (!res.ok) throw new Error('Failed to fetch all products');
-                const allProducts: Product[] = await res.json();
-                
-                // Merge products, giving precedence to the full list but keeping existing ones if not in the new list
-                const productMap = new Map<string, Product>();
-                existingProducts.forEach(p => productMap.set(p.id, p));
-                allProducts.forEach(p => productMap.set(p.id, p));
-                const mergedProducts = Array.from(productMap.values());
-    
-                set({ products: mergedProducts, fullProductsLoaded: true });
-            } catch (error) {
-                console.error("Failed to load all products", error);
-                notify("Could not load all products.", "error");
-            }
-        },
-
-        loadAdminProducts: async (page, searchTerm) => {
-            const token = getTokenFromStorage();
-            if (!token) return;
-            
-            try {
-                const params = new URLSearchParams({
-                    page: String(page),
-                    search: searchTerm
-                });
-                const res = await fetch(`${API_URL}/products/admin?${params.toString()}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (!res.ok) throw new Error('Failed to fetch admin products');
-                
-                const data: AdminProductsResponse = await res.json();
-                
-                set({ 
-                    adminProducts: data.products,
-                    adminProductsPagination: {
-                        page: data.page,
-                        pages: data.pages,
-                        total: data.total
-                    }
-                });
-            } catch (error) {
-                console.error("Failed to load admin products", error);
-                get().notify("Could not load products for admin panel.", "error");
-            }
-        },
-
-        setProducts: (products) => set({ products }),
-
-        setSelectedProduct: (product) => set({ selectedProduct: product }),
-
-        notify: (message, type = 'success') => {
-            set({ notification: { message, type } });
-            setTimeout(() => set({ notification: null }), 3000);
-        },
-        
-        addToCart: (product, quantity = 1, size) => {
-            if (!size) {
-                get().notify("Please select a size.", "error");
-                return;
-            }
-            const { cart } = get();
-            const existingItem = cart.find(item => item.id === product.id && item.size === size);
-            let newCart;
-            if (existingItem) {
-                get().notify(`Quantity updated for ${product.name} (Size: ${size})!`, 'success');
-                newCart = cart.map(item =>
-                    item.id === product.id && item.size === size ? { ...item, quantity: item.quantity + quantity } : item
-                );
-            } else {
-                const newItem: CartItem = {
-                    id: product.id, name: product.name, price: product.price, quantity: quantity,
-                    image: product.images[0], size: size,
-                };
-                get().notify(`${product.name} (Size: ${size}) added to cart!`, 'success');
-                newCart = [...cart, newItem];
-            }
-            
-            // Push GA4 add_to_cart event
-            window.dataLayer = window.dataLayer || [];
-            window.dataLayer.push({ ecommerce: null });
-            window.dataLayer.push({
-                event: 'add_to_cart',
-                ecommerce: {
-                    currency: 'BDT',
-                    items: [{
-                        item_id: product.id,
-                        item_name: product.name,
-                        item_category: product.category,
-                        price: product.price,
-                        quantity: quantity,
-                        item_variant: size
-                    }]
-                }
-            });
-
-            set({ cart: newCart });
-            get()._updateCartTotal();
-        },
-        
-        updateCartQuantity: (id, size, newQuantity) => {
-            const { cart, products } = get();
-            const cartItem = cart.find(item => item.id === id && item.size === size);
-            if (!cartItem) return;
-
-            const oldQuantity = cartItem.quantity;
-            const quantityDifference = newQuantity - oldQuantity;
-            
-            // Find the full product details for tracking
-            const productDetails = products.find(p => p.id === id);
-
-            if (quantityDifference > 0 && productDetails) { // Item quantity increased
-                window.dataLayer = window.dataLayer || [];
-                window.dataLayer.push({ ecommerce: null });
-                window.dataLayer.push({
-                    event: 'add_to_cart',
-                    ecommerce: {
-                        currency: 'BDT',
-                        items: [{
-                            item_id: productDetails.id,
-                            item_name: productDetails.name,
-                            item_category: productDetails.category,
-                            price: productDetails.price,
-                            quantity: quantityDifference, // track the number of items added
-                            item_variant: size
-                        }]
-                    }
-                });
-            } else if (quantityDifference < 0 && productDetails) { // Item quantity decreased or removed
-                 window.dataLayer = window.dataLayer || [];
-                 window.dataLayer.push({ ecommerce: null });
-                 window.dataLayer.push({
-                    event: 'remove_from_cart',
-                    ecommerce: {
-                        currency: 'BDT',
-                        items: [{
-                            item_id: productDetails.id,
-                            item_name: productDetails.name,
-                            item_category: productDetails.category,
-                            price: productDetails.price,
-                            quantity: -quantityDifference, // track the number of items removed
-                            item_variant: size
-                        }]
-                    }
-                });
-            }
-
-            let newCart;
-            if (newQuantity <= 0) {
-                newCart = cart.filter(item => !(item.id === id && item.size === size));
-            } else {
-                newCart = cart.map(item =>
-                    item.id === id && item.size === size ? { ...item, quantity: newQuantity } : item
-                );
-            }
-            set({ cart: newCart });
-            get()._updateCartTotal();
-        },
-        
-        clearCart: () => {
-            set({ cart: [] });
-            get()._updateCartTotal();
-        },
-        
-        _updateCartTotal: () => {
-            set(state => ({
-                cartTotal: state.cart.reduce((total, item) => total + (item.price * item.quantity), 0)
-            }));
-        },
-
-        login: async (email, password) => {
-            try {
-                const res = await fetch(`${API_URL}/auth/login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password }),
-                });
-                if (!res.ok) throw new Error('Login failed');
-                const { token } = await res.json();
-                localStorage.setItem('sazo_admin_token', token);
-                set({ isAdminAuthenticated: true });
-                get().navigate('/admin/dashboard');
-                get().notify('Login successful!', 'success');
-                return true;
-            } catch (error) {
-                get().notify('Incorrect email or password.', 'error');
-                return false;
-            }
-        },
-
-        logout: () => {
-            localStorage.removeItem('sazo_admin_token');
-            set({ isAdminAuthenticated: false, orders: [], contactMessages: [] });
-            get().navigate('/');
-            get().notify('You have been logged out.', 'success');
-        },
-
-        addProduct: async (productData) => {
-            const token = getTokenFromStorage();
-            const res = await fetch(`${API_URL}/products`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify(productData),
-            });
-            const newProduct = await res.json();
-            set(state => ({ products: [newProduct, ...state.products] }));
-            get().notify('Product added successfully!', 'success');
-        },
-        
-        updateProduct: async (updatedProduct) => {
-            const token = getTokenFromStorage();
-            const res = await fetch(`${API_URL}/products/${updatedProduct.id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify(updatedProduct),
-            });
-            const savedProduct = await res.json();
-            set(state => ({
-                products: state.products.map(p => p.id === savedProduct.id ? savedProduct : p)
-            }));
-            get().notify('Product updated successfully!', 'success');
-        },
-
-        deleteProduct: async (id) => {
-            const token = getTokenFromStorage();
-            await fetch(`${API_URL}/products/${id}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` },
-            });
-            set(state => ({ products: state.products.filter(p => p.id !== id) }));
-            get().notify('Product deleted successfully.', 'success');
-        },
-
-        updateOrderStatus: async (orderId, status) => {
-            const token = getTokenFromStorage();
-            const res = await fetch(`${API_URL}/orders/${orderId}/status`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ status }),
-            });
-            const updatedOrder = await res.json();
-            set(state => ({
-                orders: state.orders.map(o => o.id === updatedOrder.id ? updatedOrder : o)
-            }));
-            get().notify(`Order ${orderId} status updated to ${status}.`, 'success');
-        },
-
-        addOrder: async (customerDetails, cartItems, total, paymentInfo) => {
-            const res = await fetch(`${API_URL}/orders`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ customerDetails, cartItems, total, paymentInfo }),
-            });
-            
-            if (!res.ok) {
-                const errorData = await res.json().catch(() => ({}));
-                throw new Error(errorData.message || "Failed to place order. Please check your details.");
-            }
-            
-            const newOrder = await res.json();
-            if(get().isAdminAuthenticated) {
-                set(state => ({ orders: [newOrder, ...state.orders] }));
-            }
-            return newOrder;
-        },
-
-        deleteOrder: async (orderId) => {
-            const token = getTokenFromStorage();
-            await fetch(`${API_URL}/orders/${orderId}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` },
-            });
-            set(state => ({ orders: state.orders.filter(order => order.id !== orderId) }));
-            get().notify(`Order ${orderId} has been deleted.`, 'success');
-        },
-        
-        addContactMessage: async (messageData) => {
-            await fetch(`${API_URL}/messages`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(messageData),
-            });
-        },
-
-        markMessageAsRead: async (messageId, isRead) => {
-            const token = getTokenFromStorage();
-            const res = await fetch(`${API_URL}/messages/${messageId}/read`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ isRead }),
-            });
-            const updatedMessage = await res.json();
-            set(state => ({
-                contactMessages: state.contactMessages.map(msg => msg.id === updatedMessage.id ? updatedMessage : msg)
-            }));
-            get().notify(`Message marked as ${isRead ? 'read' : 'unread'}.`, 'success');
-        },
-
-        deleteContactMessage: async (messageId) => {
-            const token = getTokenFromStorage();
-            await fetch(`${API_URL}/messages/${messageId}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` },
-            });
-            set(state => ({ contactMessages: state.contactMessages.filter(msg => msg.id !== messageId) }));
-            get().notify('Message has been deleted.', 'success');
-        },
-        
-        updateSettings: async (newSettings) => {
-            try {
-                const token = getTokenFromStorage();
-                const res = await fetch(`${API_URL}/settings`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify(newSettings),
-                });
-                if (!res.ok) {
-                    const errorData = await res.json().catch(() => ({ message: 'Failed to update settings. The server returned an invalid response.' }));
-                    throw new Error(errorData.message || 'Failed to update settings.');
-                }
-                const updatedSettings = await res.json();
-                set({ settings: updatedSettings });
-                get().notify('Settings updated successfully!', 'success');
-            } catch (error) {
-                const errorMessage = error instanceof Error ? error.message : String(error);
-                get().notify(`Error: ${errorMessage}`, 'error');
-                throw error;
-            }
-        },
-    }),
-    {
-      name: 'sazo-storage',
-      storage: createJSONStorage(() => localStorage),
-      // Only persist the 'cart' slice of the state
-      partialize: (state) => ({ cart: state.cart }),
-      // Custom merge function to recalculate cartTotal on rehydration and validate data
-      merge: (persistedState: any, currentState: AppState) => {
-        // Safety check: if persisted state is not an object or null, ignore it
-        if (!persistedState || typeof persistedState !== 'object') {
-            return currentState;
-        }
-
-        // Strict validation for cart items to prevent crashes
-        let safeCart: CartItem[] = [];
-        if (Array.isArray(persistedState.cart)) {
-            safeCart = persistedState.cart.filter((item: any) => 
-                item && 
-                typeof item === 'object' &&
-                typeof item.id === 'string' && 
-                typeof item.price === 'number' && 
-                !isNaN(item.price) &&
-                typeof item.quantity === 'number' &&
-                !isNaN(item.quantity)
-            );
-        }
-
-        const merged = { ...currentState, ...persistedState, cart: safeCart };
-        // Recalculate total based on the validated cart
-        merged.cartTotal = safeCart.reduce((total: number, item: CartItem) => total + (item.price * item.quantity), 0);
-        
-        return merged;
-      },
-    }
-  )
+const CartItemComponent: React.FC<{ item: CartItem, updateCartQuantity: (id: string, size: string, newQuantity: number) => void }> = ({ item, updateCartQuantity }) => (
+  <div className="flex items-start border-b border-stone-200 py-4 last:border-b-0">
+    <div className="w-16 sm:w-24 aspect-[3.5/4] flex-shrink-0 overflow-hidden rounded-lg">
+      <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+    </div>
+    <div className="ml-4 flex-1 min-w-0">
+      <h3 className="text-sm sm:text-base font-semibold text-stone-900 truncate">{item.name}</h3>
+      <p className="text-xs text-pink-600 font-medium mt-0.5">Size: {item.size === 'Free' ? 'Free Size' : item.size}</p>
+      <p className="text-xs sm:text-sm text-stone-600">Price: <span>৳{item.price.toLocaleString('en-IN')}</span></p>
+      <p className="text-sm font-bold text-pink-600 sm:hidden mt-1">Total: <span>৳{(item.price * item.quantity).toLocaleString('en-IN')}</span></p>
+    </div>
+    <div className="flex flex-col sm:flex-row items-end sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 ml-4">
+      <div className="flex items-center border border-stone-300 rounded-full">
+        <button onClick={() => updateCartQuantity(item.id, item.size, item.quantity - 1)} className="p-1 text-stone-600 hover:bg-pink-100 rounded-l-full transition w-7 h-7 active:scale-95">-</button>
+        <span className="w-6 text-center font-medium text-sm text-stone-900">{item.quantity}</span>
+        <button onClick={() => updateCartQuantity(item.id, item.size, item.quantity + 1)} className="p-1 text-stone-600 hover:bg-pink-100 rounded-r-full transition w-7 h-7 active:scale-95">+</button>
+      </div>
+      <p className="text-sm font-bold text-stone-900 w-24 text-right hidden sm:block">৳{(item.price * item.quantity).toLocaleString('en-IN')}</p>
+      <button onClick={() => updateCartQuantity(item.id, item.size, 0)} className="text-gray-400 hover:text-red-500 transition p-1 sm:p-2" aria-label="Remove item">
+        <XCircle className="w-5 h-5" />
+      </button>
+    </div>
+  </div>
 );
 
-// Initialize popstate listener for browser navigation
-window.addEventListener('popstate', () => {
-  useAppStore.setState({ path: window.location.pathname });
-});
+const CartPage: React.FC = () => {
+  const { cart, updateCartQuantity, navigate, cartTotal } = useAppStore(state => ({
+    cart: state.cart,
+    updateCartQuantity: state.updateCartQuantity,
+    navigate: state.navigate,
+    cartTotal: state.cartTotal,
+  }));
 
-// Load initial data when the store is created
-useAppStore.getState().loadInitialData();
+  useEffect(() => {
+    if (cart.length > 0) {
+        window.dataLayer = window.dataLayer || [];
+        window.dataLayer.push({ ecommerce: null });
+        window.dataLayer.push({
+            event: 'view_cart',
+            ecommerce: {
+                currency: 'BDT',
+                value: cartTotal,
+                items: cart.map(item => ({
+                    item_id: item.id,
+                    item_name: item.name,
+                    price: item.price,
+                    quantity: item.quantity,
+                    item_variant: item.size
+                }))
+            },
+            page_location: window.location.href,
+            page_path: window.location.pathname
+        });
+    }
+  }, []);
+
+  if (cart.length === 0) {
+    return (
+      <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 min-h-[60vh] flex items-center justify-center">
+        <div className="text-center p-8 sm:p-16 bg-white rounded-xl shadow-lg border border-stone-200">
+          <ShoppingCart className="w-12 h-12 text-pink-300 mx-auto mb-4" />
+          <h2 className="text-xl sm:text-2xl font-bold text-stone-800 mb-2">Your Cart is Empty</h2>
+          <p className="text-sm sm:text-base text-stone-600 mb-6">It looks like you haven't added any SAZO items yet.</p>
+          <button onClick={() => navigate('/shop')} className="bg-pink-600 text-white font-medium px-8 py-3 rounded-full hover:bg-pink-700 transition duration-300 shadow active:scale-95">
+            Start Shopping
+          </button>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12">
+      <h2 className="text-3xl sm:text-4xl font-bold text-stone-900 mb-8 text-center">Your Shopping Cart</h2>
+      <div className="lg:grid lg:grid-cols-3 lg:gap-8">
+        <div className="lg:col-span-2 bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-stone-200">
+          {cart.map(item => <CartItemComponent key={`${item.id}-${item.size}`} item={item} updateCartQuantity={updateCartQuantity} />)}
+        </div>
+        <div className="lg:col-span-1 mt-6 lg:mt-0 bg-white p-6 rounded-xl shadow-lg border border-stone-200 lg:sticky top-24 h-fit">
+          <h3 className="text-xl font-bold text-stone-900 mb-6">Order Summary</h3>
+          
+          {/* Detailed Items List in Summary */}
+          <div className="space-y-4 mb-6 max-h-80 overflow-y-auto pr-2">
+            {cart.map((item) => (
+              <div key={`${item.id}-${item.size}`} className="flex gap-3">
+                <div className="w-14 aspect-[3.5/4] flex-shrink-0 overflow-hidden rounded-md border border-stone-100">
+                   <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                </div>
+                <div className="flex-1 flex flex-col justify-center min-w-0">
+                  <h4 className="text-sm font-bold text-stone-800 line-clamp-2 leading-tight">{item.name}</h4>
+                   <p className="text-xs text-stone-500 mt-1">
+                    Size: {item.size === 'Free' ? 'Free' : item.size} &bull; Qty: {item.quantity}
+                  </p>
+                  <p className="text-sm font-bold text-pink-600 mt-1">
+                    ৳{(item.price * item.quantity).toLocaleString('en-IN')}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          <div className="space-y-3 text-sm border-t border-stone-200 pt-4">
+            <div className="flex justify-between text-stone-600">
+              <span>Subtotal ({cart.length} unique items)</span>
+              <span>৳{cartTotal.toLocaleString('en-IN')}</span>
+            </div>
+            <div className="flex justify-between text-stone-600">
+              <span>Shipping (Est.)</span>
+              <span>—</span>
+            </div>
+          </div>
+          
+          <div className="mt-4 p-3 bg-stone-50 rounded-lg border border-stone-200 flex justify-between items-center shadow-sm">
+            <span className="text-base font-bold text-stone-900">Total Payable</span>
+            <span className="text-xl font-extrabold text-pink-600">৳{cartTotal.toLocaleString('en-IN')}</span>
+          </div>
+
+          <p className="text-xs text-stone-500 mt-3 text-center">Final shipping charge is calculated at checkout.</p>
+          
+          <div className="mt-6 space-y-3">
+            <button onClick={() => navigate('/checkout')} className="w-full bg-pink-600 text-white text-base font-bold px-6 py-3 rounded-full hover:bg-pink-700 transition duration-300 shadow flex items-center justify-center space-x-2 active:scale-95">
+              <Truck className="w-5 h-5" />
+              <span>Proceed to Checkout</span>
+            </button>
+
+            <button onClick={() => navigate('/shop')} className="w-full bg-white text-stone-600 border border-stone-300 text-base font-bold px-6 py-3 rounded-full hover:bg-stone-50 hover:text-pink-600 transition duration-300 shadow-sm flex items-center justify-center space-x-2 active:scale-95">
+              <ArrowLeft className="w-5 h-5" />
+              <span>Continue Shopping</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+};
+
+export default CartPage;
