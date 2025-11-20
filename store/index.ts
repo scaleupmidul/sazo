@@ -176,6 +176,7 @@ export const useAppStore = create<AppState>()(
             
             // Push GA4 add_to_cart event
             window.dataLayer = window.dataLayer || [];
+            window.dataLayer.push({ ecommerce: null });
             window.dataLayer.push({
                 event: 'add_to_cart',
                 ecommerce: {
@@ -188,9 +189,7 @@ export const useAppStore = create<AppState>()(
                         quantity: quantity,
                         item_variant: size
                     }]
-                },
-                page_location: 'https://www.sazobd.shop/cart',
-                page_path: '/cart'
+                }
             });
 
             set({ cart: newCart });
@@ -210,6 +209,7 @@ export const useAppStore = create<AppState>()(
 
             if (quantityDifference > 0 && productDetails) { // Item quantity increased
                 window.dataLayer = window.dataLayer || [];
+                window.dataLayer.push({ ecommerce: null });
                 window.dataLayer.push({
                     event: 'add_to_cart',
                     ecommerce: {
@@ -226,6 +226,7 @@ export const useAppStore = create<AppState>()(
                 });
             } else if (quantityDifference < 0 && productDetails) { // Item quantity decreased or removed
                  window.dataLayer = window.dataLayer || [];
+                 window.dataLayer.push({ ecommerce: null });
                  window.dataLayer.push({
                     event: 'remove_from_cart',
                     ecommerce: {
