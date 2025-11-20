@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { CartItem } from '../types';
 import { ShoppingCart, Truck, XCircle, ArrowLeft } from 'lucide-react';
 import { useAppStore } from '../store';
@@ -36,6 +36,29 @@ const CartPage: React.FC = () => {
     navigate: state.navigate,
     cartTotal: state.cartTotal,
   }));
+
+  useEffect(() => {
+    if (cart.length > 0) {
+        window.dataLayer = window.dataLayer || [];
+        window.dataLayer.push({ ecommerce: null });
+        window.dataLayer.push({
+            event: 'view_cart',
+            ecommerce: {
+                currency: 'BDT',
+                value: cartTotal,
+                items: cart.map(item => ({
+                    item_id: item.id,
+                    item_name: item.name,
+                    price: item.price,
+                    quantity: item.quantity,
+                    item_variant: item.size
+                }))
+            },
+            page_location: window.location.href,
+            page_path: window.location.pathname
+        });
+    }
+  }, []);
 
   if (cart.length === 0) {
     return (
