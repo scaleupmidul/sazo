@@ -117,7 +117,7 @@ const AdminOrdersPage: React.FC = () => {
   }, [orders, selectedOrder]);
 
   const filteredOrders = useMemo(() => {
-    return [...orders].reverse().filter(order => 
+    return orders.filter(order => 
       order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (order.orderId || order.id).toLowerCase().includes(searchTerm.toLowerCase()) // Search by new numeric ID too
     );
