@@ -9,10 +9,12 @@ const ProductSchema = new mongoose.Schema({
   colors: [String],
   sizes: [String],
   isNewArrival: { type: Boolean, default: false },
+  newArrivalDisplayOrder: { type: Number, default: 1000 },
   isTrending: { type: Boolean, default: false },
+  trendingDisplayOrder: { type: Number, default: 1000 },
   onSale: { type: Boolean, default: false },
   images: [String],
-  displayOrder: { type: Number, default: 1000 }, // Default high number so specifically ordered items come first
+  displayOrder: { type: Number, default: 1000 }, // Kept as fallback/general
 }, {
   timestamps: true,
   toJSON: {
@@ -28,7 +30,8 @@ const ProductSchema = new mongoose.Schema({
 // Add indexes for performance optimization
 ProductSchema.index({ isNewArrival: 1 });
 ProductSchema.index({ isTrending: 1 });
-ProductSchema.index({ displayOrder: 1, createdAt: -1 }); // Optimized for our new sort order
+ProductSchema.index({ newArrivalDisplayOrder: 1 });
+ProductSchema.index({ trendingDisplayOrder: 1 });
 ProductSchema.index({ createdAt: -1 });
 
 
