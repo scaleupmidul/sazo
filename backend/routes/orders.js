@@ -1,48 +1,20 @@
 
+
 import express from 'express';
 import Order from '../models/Order.js';
 import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-// @desc    Fetch paginated orders for admin
+// @desc    Fetch all orders
 // @route   GET /api/orders
 // @access  Private/Admin
 router.get('/', protect, async (req, res) => {
   try {
-    const page = Number(req.query.page) || 1;
-    const limit = Number(req.query.limit) || 20;
-    const search = req.query.search || '';
-    const paymentMethod = req.query.paymentMethod; // Optional filter for payment info page
-
-    const query = {};
-    if (search) {
-        // Efficient regex search
-        query.$or = [
-            { customerName: { $regex: search, $options: 'i' } },
-            { orderId: { $regex: search, $options: 'i' } },
-            { phone: { $regex: search, $options: 'i' } }
-        ];
-    }
-    if (paymentMethod) {
-        query.paymentMethod = paymentMethod;
-    }
-
-    const count = await Order.countDocuments(query);
-    const orders = await Order.find(query)
-        .sort({ createdAt: -1 })
-        .skip((page - 1) * limit)
-        .limit(limit);
-
-    res.json({ 
-        orders, 
-        page, 
-        pages: Math.ceil(count / limit), 
-        total: count 
-    });
+    const orders = await Order.find({}).sort({ createdAt: -1 });
+    res.json(orders);
   } catch (error) {
-    console.error("Orders fetch error:", error);
-    res.status(500).json({ message: 'Server Error fetching orders' });
+    res.status(500).json({ message: 'Server Error' });
   }
 });
 
