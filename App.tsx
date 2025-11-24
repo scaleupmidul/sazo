@@ -1,5 +1,5 @@
 
-import React, { useEffect, Suspense, lazy } from 'react';
+import React, { useEffect } from 'react';
 import { useAppStore } from './store';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -12,35 +12,24 @@ declare global {
 }
 window.dataLayer = window.dataLayer || [];
 
-// Lazy load pages to reduce initial bundle size and improve mobile performance
-const HomePage = lazy(() => import('./pages/HomePage'));
-const ShopPage = lazy(() => import('./pages/ShopPage'));
-const ProductDetailsPage = lazy(() => import('./pages/ProductDetailsPage'));
-const CartPage = lazy(() => import('./pages/CartPage'));
-const CheckoutPage = lazy(() => import('./pages/CheckoutPage'));
-const ContactPage = lazy(() => import('./pages/ContactPage'));
-const PolicyPage = lazy(() => import('./pages/PolicyPage'));
-const ThankYouPage = lazy(() => import('./pages/ThankYouPage'));
+// Statically import all pages to remove loading indicators during navigation
+import HomePage from './pages/HomePage';
+import ShopPage from './pages/ShopPage';
+import ProductDetailsPage from './pages/ProductDetailsPage';
+import CartPage from './pages/CartPage';
+import CheckoutPage from './pages/CheckoutPage';
+import ContactPage from './pages/ContactPage';
+import PolicyPage from './pages/PolicyPage';
+import ThankYouPage from './pages/ThankYouPage';
+import AdminLoginPage from './pages/admin/AdminLoginPage';
+import AdminLayout from './pages/admin/AdminLayout';
+import AdminDashboardPage from './pages/admin/AdminDashboardPage';
+import AdminProductsPage from './pages/admin/AdminProductsPage';
+import AdminOrdersPage from './pages/admin/AdminOrdersPage';
+import AdminMessagesPage from './pages/admin/AdminMessagesPage';
+import AdminSettingsPage from './pages/admin/AdminSettingsPage';
+import AdminPaymentInfoPage from './pages/admin/AdminPaymentInfoPage';
 
-// Admin Pages Lazy Load
-const AdminLoginPage = lazy(() => import('./pages/admin/AdminLoginPage'));
-const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'));
-const AdminDashboardPage = lazy(() => import('./pages/admin/AdminDashboardPage'));
-const AdminProductsPage = lazy(() => import('./pages/admin/AdminProductsPage'));
-const AdminOrdersPage = lazy(() => import('./pages/admin/AdminOrdersPage'));
-const AdminMessagesPage = lazy(() => import('./pages/admin/AdminMessagesPage'));
-const AdminSettingsPage = lazy(() => import('./pages/admin/AdminSettingsPage'));
-const AdminPaymentInfoPage = lazy(() => import('./pages/admin/AdminPaymentInfoPage'));
-
-
-// Minimal loader for page transitions
-const PageLoader = () => (
-  <div className="flex h-[50vh] w-full items-center justify-center">
-    <div className="relative">
-       <div className="w-10 h-10 rounded-full border-4 border-pink-100 border-t-pink-600 animate-spin"></div>
-    </div>
-  </div>
-);
 
 const App: React.FC = () => {
   const path = useAppStore(state => state.path);
@@ -56,6 +45,10 @@ const App: React.FC = () => {
     const productMatch = path.match(/^\/product\/(.+)$/);
     if (productMatch) {
         const productId = productMatch[1];
+        // FIX: This guard prevents an infinite re-render loop.
+        // It checks if the currently selected product already matches the one in the URL.
+        // This is crucial because the `products` array is a new instance on each fetch,
+        // which would otherwise cause this effect to re-run and re-set the state continuously.
         if (selectedProduct?.id === productId) {
             return;
         }
@@ -118,6 +111,7 @@ const App: React.FC = () => {
   const isCustomerPage = !path.startsWith('/admin');
 
   const renderAdminPageContent = () => {
+     // This function returns the component for a the current admin path, to be rendered inside AdminLayout.
      if (path === '/admin/dashboard') return <AdminDashboardPage />;
      if (path === '/admin/products') return <AdminProductsPage />;
      if (path === '/admin/orders') return <AdminOrdersPage />;
@@ -125,57 +119,54 @@ const App: React.FC = () => {
      if (path === '/admin/settings') return <AdminSettingsPage />;
      if (path === '/admin/payment-info') return <AdminPaymentInfoPage />;
      
+     // Default admin page if authenticated and no specific path matches
      return <AdminDashboardPage />;
   }
 
   const renderPage = () => {
-    return (
-      <Suspense fallback={<PageLoader />}>
-        {(() => {
-          if (path === '/admin/login') {
-            return <AdminLoginPage />;
-          }
+    // Standalone admin login page (no layout)
+    if (path === '/admin/login') {
+      return <AdminLoginPage />;
+    }
 
-          if (path.startsWith('/admin')) {
-            return (
-              <AdminLayout>
-                  <Suspense fallback={<PageLoader />}>
-                    {renderAdminPageContent()}
-                  </Suspense>
-              </AdminLayout>
-            );
-          }
-          
-          const productMatch = path.match(/^\/product\/(.+)$/);
-          if (productMatch) {
-            return <ProductDetailsPage />;
-          }
+    // All other admin pages are wrapped in the layout
+    if (path.startsWith('/admin')) {
+      return (
+        <AdminLayout>
+            {renderAdminPageContent()}
+        </AdminLayout>
+      );
+    }
+    
+    // Customer-facing pages
+    const productMatch = path.match(/^\/product\/(.+)$/);
+    if (productMatch) {
+      return <ProductDetailsPage />;
+    }
 
-          const thankYouMatch = path.match(/^\/thank-you\/(.+)$/);
-          if (thankYouMatch) {
-              const orderId = thankYouMatch[1];
-              return <ThankYouPage orderId={orderId} />;
-          }
+    const thankYouMatch = path.match(/^\/thank-you\/(.+)$/);
+    if (thankYouMatch) {
+        const orderId = thankYouMatch[1];
+        return <ThankYouPage orderId={orderId} />;
+    }
 
-          switch (path) {
-            case '/':
-              return <HomePage />;
-            case '/shop':
-              return <ShopPage />;
-            case '/cart':
-              return <CartPage />;
-            case '/checkout':
-              return <CheckoutPage />;
-            case '/contact':
-              return <ContactPage />;
-            case '/policy':
-              return <PolicyPage />;
-            default:
-              return <HomePage />;
-          }
-        })()}
-      </Suspense>
-    );
+    switch (path) {
+      case '/':
+        return <HomePage />;
+      case '/shop':
+        return <ShopPage />;
+      case '/cart':
+        return <CartPage />;
+      case '/checkout':
+        return <CheckoutPage />;
+      case '/contact':
+        return <ContactPage />;
+      case '/policy':
+        return <PolicyPage />;
+      default:
+        // For any other path, show the home page. A 404 page could be added here.
+        return <HomePage />;
+    }
   };
 
   return (
@@ -185,19 +176,30 @@ const App: React.FC = () => {
           .sazo-logo {
             font-family: 'Poppins', sans-serif;
           }
+
+          /* Hide scrollbar for IE, Edge */
           body { 
             font-family: 'Inter', sans-serif; 
             color: #444;
-            overflow-x: hidden;
-            -ms-overflow-style: none;
+            overflow-x: hidden; /* Prevent horizontal scroll */
+            -ms-overflow-style: none;  /* IE and Edge */
           }
-          html { scrollbar-width: none; }
-          ::-webkit-scrollbar { display: none; }
+
+          /* Hide scrollbar for Firefox */
+          html {
+              scrollbar-width: none;
+          }
+          
+          /* Hide scrollbar for Chrome, Safari and Opera */
+          ::-webkit-scrollbar {
+              display: none;
+          }
 
           h1, .font-display-xl { font-weight: 700; }
           h2, .font-display-lg { font-weight: 600; }
           h3, .font-display-md { font-weight: 600; }
 
+          /* Override browser autofill styles */
           input:-webkit-autofill,
           input:-webkit-autofill:hover, 
           input:-webkit-autofill:focus, 
@@ -229,6 +231,7 @@ const App: React.FC = () => {
           }
           .animate-fadeIn { animation: fadeIn 0.5s ease-in-out; }
 
+          /* New Animations for Hero Slider */
           @keyframes fadeInUp {
               from { opacity: 0; transform: translateY(20px); }
               to { opacity: 1; transform: translateY(0); }
@@ -238,6 +241,7 @@ const App: React.FC = () => {
           .text-shadow { text-shadow: 0 1px 3px rgba(0,0,0,0.3); }
           .text-shadow-md { text-shadow: 0 2px 8px rgba(0,0,0,0.4); }
 
+          /* WhatsApp Pulse Animation */
           @keyframes pulse-whatsapp {
             0% { box-shadow: 0 0 0 0 rgba(219, 39, 119, 0.7); }
             70% { box-shadow: 0 0 0 15px rgba(219, 39, 119, 0); }
