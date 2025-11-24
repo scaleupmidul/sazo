@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Order, CartItem, OrderStatus } from '../../types';
-import { Search, X, Trash2, ChevronLeft, ChevronRight, User, MapPin, Phone, Calendar, CreditCard } from 'lucide-react';
+import { Search, X, Trash2, ChevronLeft, ChevronRight, User, MapPin, Phone, Calendar, CreditCard, Eye } from 'lucide-react';
 import { useAppStore } from '../../store';
 import TableSkeleton from '../../components/admin/TableSkeleton';
 
@@ -176,7 +177,10 @@ const AdminOrdersPage: React.FC = () => {
   
   // Use ID tracking instead of object reference to prevent render loops
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
-  const selectedOrder = useMemo(() => orders.find(o => o.id === selectedOrderId), [orders, selectedOrderId]);
+  
+  // SAFEGUARD: Ensure orders is always an array
+  const safeOrders = orders || [];
+  const selectedOrder = useMemo(() => safeOrders.find(o => o.id === selectedOrderId), [safeOrders, selectedOrderId]);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
@@ -266,14 +270,15 @@ const AdminOrdersPage: React.FC = () => {
                             <th className="px-6 py-4 font-semibold">Date</th>
                             <th className="px-6 py-4 font-semibold">Total</th>
                             <th className="px-6 py-4 font-semibold">Status</th>
+                            <th className="px-6 py-4 font-semibold text-right">Actions</th>
                         </tr>
                     </thead>
                     {isLoading ? (
-                        <TableSkeleton cols={5} rows={10} />
+                        <TableSkeleton cols={6} rows={10} />
                     ) : (
                         <tbody className="divide-y divide-slate-100">
-                            {orders && orders.length > 0 ? (
-                                orders.map(order => (
+                            {safeOrders.length > 0 ? (
+                                safeOrders.map(order => (
                                     <tr key={order.id} className="hover:bg-slate-50/50 transition-colors cursor-pointer group" onClick={() => setSelectedOrderId(order.id)}>
                                         <td className="px-6 py-4 font-medium text-slate-700 group-hover:text-pink-600 transition-colors">#{order.orderId || order.id}</td>
                                         <td className="px-6 py-4">
@@ -285,11 +290,19 @@ const AdminOrdersPage: React.FC = () => {
                                         <td className="px-6 py-4">
                                             {getStatusBadge(order.status)}
                                         </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); setSelectedOrderId(order.id); }}
+                                                className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                                            >
+                                                <Eye className="w-4 h-4" />
+                                            </button>
+                                        </td>
                                     </tr>
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={5} className="text-center py-12 text-slate-400">
+                                    <td colSpan={6} className="text-center py-12 text-slate-400">
                                         <div className="flex flex-col items-center justify-center">
                                             <Search className="w-10 h-10 mb-2 opacity-20" />
                                             <p>No orders found.</p>
