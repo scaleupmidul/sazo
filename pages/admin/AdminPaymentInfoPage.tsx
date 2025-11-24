@@ -1,8 +1,33 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../../store';
 import { Search, Trash2, RefreshCcw } from 'lucide-react';
 import TableSkeleton from '../../components/admin/TableSkeleton';
+
+// Helper to format date and time in Bangladesh Time
+const getFormattedDateTime = (isoString?: string) => {
+    if (!isoString) return { date: 'N/A', time: '' };
+    const dateObj = new Date(isoString);
+    
+    // Format Date: 24 Nov 2025
+    const date = dateObj.toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        timeZone: 'Asia/Dhaka'
+    });
+
+    // Format Time: 05:30 PM
+    const time = dateObj.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+        timeZone: 'Asia/Dhaka'
+    });
+
+    return { date, time };
+};
 
 const AdminPaymentInfoPage: React.FC = () => {
     // Use dedicated paymentRecords state instead of shared orders state
@@ -122,11 +147,17 @@ const AdminPaymentInfoPage: React.FC = () => {
                             {safeRecords.length > 0 ? safeRecords.map(order => {
                                 const cartSubtotal = order.cartItems?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0;
                                 const deliveryCharge = order.total - cartSubtotal;
+                                const { date, time } = getFormattedDateTime(order.createdAt || order.date);
 
                                 return (
                                     <tr key={order.id} className="bg-white border-b hover:bg-gray-50">
                                         <td className="px-6 py-4 font-medium text-gray-900">{order.orderId || order.id}</td>
-                                        <td className="px-6 py-4">{order.date}</td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex flex-col">
+                                                <span className="font-medium text-gray-700">{date}</span>
+                                                <span className="text-xs text-gray-500">{time}</span>
+                                            </div>
+                                        </td>
                                         <td className="px-6 py-4">
                                             <div>{order.customerName}</div>
                                             <div className="text-xs text-gray-500">{order.phone}</div>
