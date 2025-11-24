@@ -101,9 +101,9 @@ export const useAppStore = create<AppState>()(
                 }
             } finally {
                 set({ loading: false });
-                setTimeout(() => {
-                    get().ensureAllProductsLoaded();
-                }, 100);
+                // REMOVED: setTimeout(() => { get().ensureAllProductsLoaded(); }, 100);
+                // The automatic fetching of all products (with heavy images) is removed to improve initial load performance.
+                // Products will now be fetched on demand (e.g., when visiting Shop Page or Product Details).
             }
         },
 
@@ -248,6 +248,32 @@ export const useAppStore = create<AppState>()(
                 set({ products: mergedProducts, fullProductsLoaded: true });
             } catch (error) {
                 console.error("Failed to load all products", error);
+            }
+        },
+
+        fetchProductDetails: async (id: string) => {
+            const { products } = get();
+            const existing = products.find(p => p.id === id);
+            
+            // Optimistic update: Show what we have immediately
+            if (existing) {
+                set({ selectedProduct: existing });
+            }
+
+            try {
+                const res = await fetch(`${API_URL}/products/${id}`);
+                // If route exists and returns data, update state with full details
+                if (res.ok) {
+                    const fullProduct = await res.json();
+                    set(state => ({
+                        products: state.products.map(p => p.id === id ? fullProduct : p),
+                        selectedProduct: fullProduct
+                    }));
+                } else {
+                    console.warn(`Fetch details failed for ID ${id} with status ${res.status}. Using existing partial data.`);
+                }
+            } catch (error) {
+                console.error("Failed to fetch product details", error);
             }
         },
 
