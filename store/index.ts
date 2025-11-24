@@ -135,11 +135,12 @@ export const useAppStore = create<AppState>()(
 
                 const data = await res.json();
                 set({ 
-                    orders: data.orders,
+                    // SAFEGUARD: Ensure orders is always an array, even if API returns null/undefined
+                    orders: Array.isArray(data.orders) ? data.orders : [],
                     ordersPagination: {
-                        page: data.page,
-                        pages: data.pages,
-                        total: data.total
+                        page: data.page || 1,
+                        pages: data.pages || 1,
+                        total: data.total || 0
                     }
                 });
             } catch (error) {
