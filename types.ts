@@ -1,4 +1,5 @@
 
+
 // FIX: Import Dispatch and SetStateAction types from React to resolve namespace errors.
 import type { Dispatch, SetStateAction } from 'react';
 
@@ -42,6 +43,7 @@ export interface Order {
   total: number;
   status: OrderStatus;
   date: string;
+  createdAt?: string; // Added timestamp for precise time display
   paymentMethod: 'COD' | 'Online';
   paymentDetails?: {
     paymentNumber: string;
