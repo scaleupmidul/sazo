@@ -198,6 +198,7 @@ const AdminOrdersPage: React.FC = () => {
     setIsLoading(true);
     try {
         await loadAdminOrders(currentPage, debouncedSearchTerm);
+        console.log("Orders fetch completed.");
     } catch (error) {
         console.error("Error fetching orders:", error);
     } finally {
@@ -314,6 +315,7 @@ const AdminOrdersPage: React.FC = () => {
                                         <div className="flex flex-col items-center justify-center">
                                             <Search className="w-10 h-10 mb-2 opacity-20" />
                                             <p>No orders found.</p>
+                                            <p className="text-xs mt-1 text-slate-300">Try refreshing or checking your connection.</p>
                                         </div>
                                     </td>
                                 </tr>
