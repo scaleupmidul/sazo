@@ -1,4 +1,5 @@
 
+
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { AppState, Product, CartItem, Order, OrderStatus, ContactMessage, AppSettings, AdminProductsResponse } from '../types';
@@ -488,11 +489,11 @@ export const useAppStore = create<AppState>()(
             get().notify(`Order ${orderId} status updated to ${status}.`, 'success');
         },
 
-        addOrder: async (customerDetails, cartItems, total, paymentInfo) => {
+        addOrder: async (customerDetails, cartItems, total, paymentInfo, deliveryCharge) => {
             const res = await fetch(`${API_URL}/orders`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ customerDetails, cartItems, total, paymentInfo }),
+                body: JSON.stringify({ customerDetails, cartItems, total, paymentInfo, deliveryCharge }),
             });
             
             if (!res.ok) {
