@@ -82,6 +82,11 @@ export const useAppStore = create<AppState>()(
                     // Fetch messages to show notification badge count in sidebar
                     const messagesRes = await fetch(`${API_URL}/messages`, { headers });
 
+                    if (messagesRes.status === 401) {
+                        get().logout();
+                        return;
+                    }
+
                     if (messagesRes.ok) {
                         const messagesData = await messagesRes.json();
                         set({ contactMessages: messagesData });
@@ -108,6 +113,13 @@ export const useAppStore = create<AppState>()(
                  const res = await fetch(`${API_URL}/stats`, {
                      headers: { 'Authorization': `Bearer ${token}` }
                  });
+
+                 if (res.status === 401) {
+                    get().logout();
+                    get().notify("Session expired. Please log in again.", "error");
+                    return;
+                 }
+
                  if (!res.ok) throw new Error('Failed to fetch stats');
                  const data = await res.json();
                  set({ dashboardStats: data });
@@ -133,6 +145,13 @@ export const useAppStore = create<AppState>()(
                 const res = await fetch(`${API_URL}/orders?${params.toString()}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
+
+                if (res.status === 401) {
+                    get().logout();
+                    get().notify("Session expired. Please log in again.", "error");
+                    return;
+                }
+
                 if (!res.ok) throw new Error('Failed to fetch orders');
 
                 const data = await res.json();
@@ -168,6 +187,13 @@ export const useAppStore = create<AppState>()(
                 const res = await fetch(`${API_URL}/orders?${params.toString()}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
+
+                if (res.status === 401) {
+                    get().logout();
+                    get().notify("Session expired. Please log in again.", "error");
+                    return;
+                }
+
                 if (!res.ok) throw new Error('Failed to fetch payment records');
 
                 const data = await res.json();
@@ -218,6 +244,13 @@ export const useAppStore = create<AppState>()(
                 const res = await fetch(`${API_URL}/products/admin?${params.toString()}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
+
+                if (res.status === 401) {
+                    get().logout();
+                    get().notify("Session expired. Please log in again.", "error");
+                    return;
+                }
+
                 if (!res.ok) throw new Error('Failed to fetch admin products');
                 
                 const data: AdminProductsResponse = await res.json();
@@ -378,8 +411,8 @@ export const useAppStore = create<AppState>()(
 
         logout: () => {
             localStorage.removeItem('sazo_admin_token');
-            set({ isAdminAuthenticated: false, orders: [], contactMessages: [], dashboardStats: null });
-            get().navigate('/');
+            set({ isAdminAuthenticated: false, orders: [], contactMessages: [], dashboardStats: null, paymentRecords: [] });
+            get().navigate('/admin/login');
             get().notify('You have been logged out.', 'success');
         },
 
