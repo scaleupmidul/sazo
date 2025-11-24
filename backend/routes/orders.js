@@ -1,5 +1,6 @@
 
 
+
 import express from 'express';
 import Order from '../models/Order.js';
 import { protect } from '../middleware/authMiddleware.js';
@@ -77,7 +78,7 @@ router.get('/:id', async (req, res) => {
 // @access  Public
 router.post('/', async (req, res) => {
   try {
-    const { customerDetails, cartItems, total, paymentInfo } = req.body;
+    const { customerDetails, cartItems, total, paymentInfo, deliveryCharge } = req.body;
     
     if (!cartItems || cartItems.length === 0) {
         return res.status(400).json({ message: 'Cart is empty' });
@@ -105,6 +106,7 @@ router.post('/', async (req, res) => {
         city: customerDetails?.city || '',
         cartItems: cartItems,
         total: total,
+        deliveryCharge: deliveryCharge || 0,
         paymentMethod: paymentInfo?.paymentMethod || 'COD',
         paymentDetails: paymentInfo?.paymentDetails,
         date: new Date().toISOString().split('T')[0],
