@@ -1,5 +1,6 @@
 
 
+
 // FIX: Import Dispatch and SetStateAction types from React to resolve namespace errors.
 import type { Dispatch, SetStateAction } from 'react';
 
@@ -41,6 +42,7 @@ export interface Order {
   city: string;
   cartItems: CartItem[];
   total: number;
+  deliveryCharge?: number; // Added field to store selected delivery charge
   status: OrderStatus;
   date: string;
   createdAt?: string; // Added timestamp for precise time display
@@ -192,7 +194,8 @@ export interface AppState {
             amount: number;
             transactionId: string;
         }
-    }
+    },
+    deliveryCharge: number // Added parameter
   ) => Promise<Order>;
   deleteOrder: (orderId: string) => Promise<void>;
 
