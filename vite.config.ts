@@ -10,11 +10,9 @@ export default defineConfig({
     sourcemap: false,
     rollupOptions: {
       output: {
-        manualChunks(id) {
-          // Creates a separate vendor chunk for node_modules to cache them effectively
-          if (id.includes('node_modules')) {
-            return 'vendor';
-          }
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          utils: ['lucide-react', 'zustand'],
         },
       },
     },
