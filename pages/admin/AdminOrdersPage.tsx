@@ -96,7 +96,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ order, onClose, u
 };
 
 const AdminOrdersPage: React.FC = () => {
-  const { orders, updateOrderStatus, deleteOrder, refreshOrders } = useAppStore();
+  const { orders, updateOrderStatus, deleteOrder, refreshOrders, markOrdersAsSeen } = useAppStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -104,6 +104,11 @@ const AdminOrdersPage: React.FC = () => {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 15;
+
+  useEffect(() => {
+    // Mark orders as seen when entering the page
+    markOrdersAsSeen();
+  }, [markOrdersAsSeen]);
 
   useEffect(() => {
     // This effect syncs the selected order with the main orders list.
@@ -130,6 +135,8 @@ const AdminOrdersPage: React.FC = () => {
   const handleRefresh = async () => {
       setIsRefreshing(true);
       await refreshOrders();
+      // Mark orders as seen after refresh since user is already on the page
+      markOrdersAsSeen();
       setIsRefreshing(false);
   };
 
@@ -139,9 +146,14 @@ const AdminOrdersPage: React.FC = () => {
       (order.orderId || order.id || '').toLowerCase().includes(searchTerm.toLowerCase()) // Search by new numeric ID too
     ).sort((a, b) => {
         // Sort by Date Descending (Newest first)
-        const dateComparison = b.date.localeCompare(a.date);
+        // Use createdAt for better precision if available, otherwise fallback to date string
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : new Date(a.date).getTime();
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : new Date(b.date).getTime();
+        
+        const dateComparison = timeB - timeA;
         if (dateComparison !== 0) return dateComparison;
-        // Fallback to ID Descending (assuming Mongo ID is roughly time-sequential)
+        
+        // Fallback to ID Descending
         return b.id.localeCompare(a.id);
     });
   }, [orders, searchTerm]);
@@ -152,6 +164,34 @@ const AdminOrdersPage: React.FC = () => {
       (currentPage - 1) * ITEMS_PER_PAGE,
       currentPage * ITEMS_PER_PAGE
   );
+
+  const formatOrderDateTime = (order: Order) => {
+      const dateSource = order.createdAt || order.date;
+      const date = new Date(dateSource);
+      
+      // If date is invalid (e.g. parsing issue), return original string
+      if (isNaN(date.getTime())) {
+          return { date: order.date, time: '' };
+      }
+
+      const dateStr = date.toLocaleDateString('en-US', { 
+          day: 'numeric', 
+          month: 'short', 
+          year: 'numeric',
+          timeZone: 'Asia/Dhaka'
+      });
+      
+      // If we only have the YYYY-MM-DD string (no time), don't show arbitrary time
+      const hasTime = !!order.createdAt;
+      const timeStr = hasTime ? date.toLocaleTimeString('en-US', { 
+          hour: '2-digit', 
+          minute: '2-digit', 
+          hour12: true,
+          timeZone: 'Asia/Dhaka'
+      }) : '';
+
+      return { date: dateStr, time: timeStr };
+  };
 
   return (
     <div>
@@ -191,22 +231,28 @@ const AdminOrdersPage: React.FC = () => {
                     </tr>
                 </thead>
                 <tbody>
-                    {paginatedOrders.map(order => (
-                        <tr key={order.id} className="bg-white border-b hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedOrder(order)}>
-                            <td className="px-6 py-4 font-medium text-gray-900">{order.orderId || order.id}</td>
-                            <td className="px-6 py-4">
-                                <div>{order.customerName}</div>
-                                <div className="text-xs text-gray-500">{order.phone}</div>
-                            </td>
-                            <td className="px-6 py-4">{order.date}</td>
-                            <td className="px-6 py-4">৳{order.total.toLocaleString()}</td>
-                            <td className="px-6 py-4">
-                                <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(order.status)}`}>
-                                    {order.status}
-                                </span>
-                            </td>
-                        </tr>
-                    ))}
+                    {paginatedOrders.map(order => {
+                        const { date, time } = formatOrderDateTime(order);
+                        return (
+                            <tr key={order.id} className="bg-white border-b hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedOrder(order)}>
+                                <td className="px-6 py-4 font-medium text-gray-900">{order.orderId || order.id}</td>
+                                <td className="px-6 py-4">
+                                    <div>{order.customerName}</div>
+                                    <div className="text-xs text-gray-500">{order.phone}</div>
+                                </td>
+                                <td className="px-6 py-4">
+                                    <div className="font-medium text-gray-900">{date}</div>
+                                    {time && <div className="text-xs text-gray-500">{time}</div>}
+                                </td>
+                                <td className="px-6 py-4">৳{order.total.toLocaleString()}</td>
+                                <td className="px-6 py-4">
+                                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(order.status)}`}>
+                                        {order.status}
+                                    </span>
+                                </td>
+                            </tr>
+                        );
+                    })}
                     {paginatedOrders.length === 0 && (
                         <tr>
                             <td colSpan={5} className="text-center py-8 text-gray-500">
