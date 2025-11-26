@@ -1,5 +1,4 @@
 
-
 import mongoose from 'mongoose';
 
 const CartItemSchema = new mongoose.Schema({
@@ -27,7 +26,7 @@ const OrderSchema = new mongoose.Schema({
   city: { type: String }, // Not required, as it depends on settings
   cartItems: [CartItemSchema],
   total: { type: Number, required: true },
-  deliveryCharge: { type: Number, default: 0 },
+  shippingCharge: { type: Number }, // Explicitly store shipping charge
   status: {
     type: String,
     enum: ['Pending', 'Confirmed', 'Shipped', 'Delivered', 'Cancelled'],
