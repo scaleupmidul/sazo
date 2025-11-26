@@ -10,9 +10,11 @@ export default defineConfig({
     sourcemap: false,
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Keep core dependencies in vendor, but pages will now be auto-split by React.lazy
-          vendor: ['react', 'react-dom', 'zustand', 'lucide-react'],
+        manualChunks(id) {
+          // Creates a separate vendor chunk for node_modules to cache them effectively
+          if (id.includes('node_modules')) {
+            return 'vendor';
+          }
         },
       },
     },
