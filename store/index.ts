@@ -1,5 +1,4 @@
 
-
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { AppState, Product, CartItem, Order, OrderStatus, ContactMessage, AppSettings, AdminProductsResponse } from '../types';
@@ -81,6 +80,7 @@ export const useAppStore = create<AppState>()(
         },
 
         loadAdminData: async () => {
+            const { logout } = get();
             const token = getTokenFromStorage();
             if (!token) return;
             
@@ -90,6 +90,11 @@ export const useAppStore = create<AppState>()(
                     fetch(`${API_URL}/orders`, { headers }),
                     fetch(`${API_URL}/messages`, { headers })
                 ]);
+
+                if (ordersRes.status === 401 || messagesRes.status === 401) {
+                    logout();
+                    return;
+                }
 
                 if (ordersRes.ok && messagesRes.ok) {
                     const ordersData = await ordersRes.json();
