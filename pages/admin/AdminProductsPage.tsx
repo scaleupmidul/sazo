@@ -1,43 +1,53 @@
 
-
 import React, { useState, useEffect } from 'react';
 import { Product } from '../../types';
-import { Plus, Edit, Trash2, Search, LoaderCircle, X, UploadCloud } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, LoaderCircle, X } from 'lucide-react';
 import { useAppStore } from '../../store';
 import TableSkeleton from '../../components/admin/TableSkeleton';
 
-// --- CLOUDINARY CONFIGURATION ---
-// TODO: Replace these with your actual Cloudinary details
-const CLOUD_NAME = 'YOUR_CLOUD_NAME'; // e.g., 'dxy...123'
-const UPLOAD_PRESET = 'YOUR_UPLOAD_PRESET'; // e.g., 'sazo_uploads' (Must be Unsigned)
+// Utility function to compress images client-side
+const compressImage = (file: File, options: { maxWidth: number; quality: number }): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.src = URL.createObjectURL(file);
+        img.onload = () => {
+            URL.revokeObjectURL(img.src);
+            const { maxWidth, quality } = options;
+            let { width, height } = img;
 
-const uploadToCloudinary = async (file: File): Promise<string> => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('upload_preset', UPLOAD_PRESET);
-    
-    // Add folder structure if needed (optional)
-    // formData.append('folder', 'sazo_products');
+            if (width > height) {
+                if (width > maxWidth) {
+                    height = Math.round((height * maxWidth) / width);
+                    width = maxWidth;
+                }
+            } else {
+                const maxHeight = maxWidth;
+                if (height > maxHeight) {
+                    width = Math.round((width * maxHeight) / height);
+                    height = maxHeight;
+                }
+            }
 
-    const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
-        method: 'POST',
-        body: formData,
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return reject('Failed to get canvas context');
+            
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL(file.type === 'image/png' ? 'image/png' : 'image/jpeg', quality));
+        };
+        img.onerror = (error) => reject(error);
     });
-
-    if (!response.ok) {
-        throw new Error('Image upload failed');
-    }
-
-    const data = await response.json();
-    return data.secure_url; // Returns the direct HTTPS link
 };
 
 interface ImageInputProps {
     currentImage: string;
     onImageChange: (value: string) => void;
+    options: { maxWidth: number; quality: number };
 }
 
-const ImageInput: React.FC<ImageInputProps> = ({ currentImage, onImageChange }) => {
+const ImageInput: React.FC<ImageInputProps> = ({ currentImage, onImageChange, options }) => {
     const { notify } = useAppStore();
     const [inputType, setInputType] = useState<'upload' | 'url'>('upload');
     const [isProcessing, setIsProcessing] = useState(false);
@@ -46,25 +56,18 @@ const ImageInput: React.FC<ImageInputProps> = ({ currentImage, onImageChange }) 
         const file = e.target.files?.[0];
         if (!file) return;
 
-        // Check if Cloudinary Config is set
-        if (CLOUD_NAME === 'YOUR_CLOUD_NAME' || UPLOAD_PRESET === 'YOUR_UPLOAD_PRESET') {
-            notify('Cloudinary is not configured in the code yet!', 'error');
-            return;
-        }
-
-        if (file.size > 10 * 1024 * 1024) { // 10MB limit
-             notify('File is too large. Please select an image under 10MB.', 'error');
+        if (file.size > 15 * 1024 * 1024) {
+             notify('File is too large. Please select an image under 15MB.', 'error');
              return;
         }
         
         setIsProcessing(true);
         try {
-            const imageUrl = await uploadToCloudinary(file);
-            onImageChange(imageUrl);
-            notify('Image uploaded successfully!', 'success');
+            const compressedDataUrl = await compressImage(file, options);
+            onImageChange(compressedDataUrl);
         } catch (error) {
-            console.error('Cloudinary upload error:', error);
-            notify('Failed to upload image. Please check internet or config.', 'error');
+            console.error('Image compression failed:', error);
+            notify('Failed to process image. Please try a different one.', 'error');
         } finally {
             setIsProcessing(false);
         }
@@ -73,29 +76,23 @@ const ImageInput: React.FC<ImageInputProps> = ({ currentImage, onImageChange }) 
     return (
         <div className="flex-grow">
             <div className="flex items-center mb-2">
-                <button type="button" onClick={() => setInputType('upload')} className={`px-3 py-1 text-xs rounded-l-md ${inputType === 'upload' ? 'bg-pink-600 text-white' : 'bg-gray-200 text-gray-700'}`}>Upload (Cloudinary)</button>
-                <button type="button" onClick={() => setInputType('url')} className={`px-3 py-1 text-xs rounded-r-md ${inputType === 'url' ? 'bg-pink-600 text-white' : 'bg-gray-200 text-gray-700'}`}>Direct URL</button>
+                <button type="button" onClick={() => setInputType('upload')} className={`px-3 py-1 text-xs rounded-l-md ${inputType === 'upload' ? 'bg-pink-600 text-white' : 'bg-gray-200 text-gray-700'}`}>Upload File</button>
+                <button type="button" onClick={() => setInputType('url')} className={`px-3 py-1 text-xs rounded-r-md ${inputType === 'url' ? 'bg-pink-600 text-white' : 'bg-gray-200 text-gray-700'}`}>Use Image URL</button>
             </div>
             {inputType === 'upload' ? (
                 <div className="flex items-center gap-2">
-                    <label className="flex-grow cursor-pointer">
-                        <div className="block w-full text-sm text-gray-500 border border-dashed border-gray-300 rounded-lg p-2 hover:bg-gray-50 text-center flex items-center justify-center gap-2">
-                            {isProcessing ? <LoaderCircle className="w-4 h-4 animate-spin text-pink-600"/> : <UploadCloud className="w-4 h-4 text-gray-400" />}
-                            <span>{isProcessing ? 'Uploading...' : 'Click to Upload'}</span>
-                        </div>
-                        <input 
-                            type="file" 
-                            onChange={handleFileSelect} 
-                            accept="image/*" 
-                            className="hidden"
-                            disabled={isProcessing}
-                        />
-                    </label>
+                    <input 
+                        type="file" 
+                        onChange={handleFileSelect} 
+                        accept="image/*" 
+                        className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100"
+                    />
+                    {isProcessing && <LoaderCircle className="w-5 h-5 animate-spin text-pink-600 flex-shrink-0" />}
                 </div>
             ) : (
                 <input 
                     type="text"
-                    value={currentImage}
+                    value={currentImage.startsWith('data:') ? '' : currentImage}
                     onChange={(e) => onImageChange(e.target.value)}
                     placeholder="https://example.com/image.jpg"
                     className="w-full p-2 border rounded bg-white text-black text-sm"
@@ -106,6 +103,8 @@ const ImageInput: React.FC<ImageInputProps> = ({ currentImage, onImageChange }) 
 };
 
 const ProductFormModal: React.FC<{ product?: Product | null, onSave: (p: any) => Promise<void>, onClose: () => void }> = ({ product, onSave, onClose }) => {
+    // Initialize form data
+    // For displayOrder fields: if they are undefined, 0, or 1000, initialize as empty string to show placeholder
     const [formData, setFormData] = useState({
         name: product?.name || '',
         category: product?.category || '',
@@ -161,8 +160,10 @@ const ProductFormModal: React.FC<{ product?: Product | null, onSave: (p: any) =>
             sizes: formData.sizes,
             images: [formData.image1, formData.image2, formData.image3].filter(Boolean),
             isNewArrival: formData.isNewArrival,
+            // Ensure empty input or 0 is saved as 1000 (default)
             newArrivalDisplayOrder: Number(formData.newArrivalDisplayOrder) || 1000,
             isTrending: formData.isTrending,
+            // Ensure empty input or 0 is saved as 1000 (default)
             trendingDisplayOrder: Number(formData.trendingDisplayOrder) || 1000,
             onSale: formData.onSale,
         };
@@ -223,11 +224,12 @@ const ProductFormModal: React.FC<{ product?: Product | null, onSave: (p: any) =>
                                         <label className="text-sm font-medium text-gray-700 block mb-1">Image 1 (Primary)</label>
                                         <div className="flex items-center gap-4">
                                             {formData.image1 && (
-                                                <img src={formData.image1} alt="Preview 1" className="w-12 h-12 object-cover rounded-lg flex-shrink-0 bg-gray-100"/>
+                                                <img src={formData.image1} alt="Preview 1" className="w-12 h-12 object-cover rounded-lg flex-shrink-0"/>
                                             )}
                                             <ImageInput 
                                                 currentImage={formData.image1}
                                                 onImageChange={(val) => handleImageChange('image1', val)}
+                                                options={{ maxWidth: 1200, quality: 0.85 }}
                                             />
                                         </div>
                                     </div>
@@ -235,11 +237,12 @@ const ProductFormModal: React.FC<{ product?: Product | null, onSave: (p: any) =>
                                         <label className="text-sm font-medium text-gray-700 block mb-1">Image 2</label>
                                         <div className="flex items-center gap-4">
                                             {formData.image2 && (
-                                                <img src={formData.image2} alt="Preview 2" className="w-12 h-12 object-cover rounded-lg flex-shrink-0 bg-gray-100"/>
+                                                <img src={formData.image2} alt="Preview 2" className="w-12 h-12 object-cover rounded-lg flex-shrink-0"/>
                                             )}
                                             <ImageInput 
                                                 currentImage={formData.image2}
                                                 onImageChange={(val) => handleImageChange('image2', val)}
+                                                options={{ maxWidth: 1200, quality: 0.85 }}
                                             />
                                         </div>
                                     </div>
@@ -247,11 +250,12 @@ const ProductFormModal: React.FC<{ product?: Product | null, onSave: (p: any) =>
                                         <label className="text-sm font-medium text-gray-700 block mb-1">Image 3</label>
                                         <div className="flex items-center gap-4">
                                             {formData.image3 && (
-                                                <img src={formData.image3} alt="Preview 3" className="w-12 h-12 object-cover rounded-lg flex-shrink-0 bg-gray-100"/>
+                                                <img src={formData.image3} alt="Preview 3" className="w-12 h-12 object-cover rounded-lg flex-shrink-0"/>
                                             )}
                                             <ImageInput 
                                                 currentImage={formData.image3}
                                                 onImageChange={(val) => handleImageChange('image3', val)}
+                                                options={{ maxWidth: 1200, quality: 0.85 }}
                                             />
                                         </div>
                                     </div>
@@ -340,15 +344,17 @@ const AdminProductsPage: React.FC = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [isLoading, setIsLoading] = useState(true);
 
+    // Debounce search term to avoid excessive API calls
     useEffect(() => {
         const handler = setTimeout(() => {
             setDebouncedSearchTerm(searchTerm);
-            setCurrentPage(1);
+            setCurrentPage(1); // Reset to first page on a new search
         }, 300);
 
         return () => clearTimeout(handler);
     }, [searchTerm]);
 
+    // Fetch products when page or debounced search term changes
     useEffect(() => {
         const fetchProducts = async () => {
             setIsLoading(true);
@@ -372,6 +378,7 @@ const AdminProductsPage: React.FC = () => {
     const handleDelete = async (id: string) => {
         if (window.confirm('Are you sure you want to delete this product?')) {
             await deleteProduct(id);
+            // After deleting, refetch. If it was the last item on the current page, go to the previous page.
             if (adminProducts.length === 1 && currentPage > 1) {
                 setCurrentPage(currentPage - 1);
             } else {
@@ -388,11 +395,12 @@ const AdminProductsPage: React.FC = () => {
         }
         setIsModalOpen(false);
         setEditingProduct(null);
+        // Refetch current page to show changes
         await loadAdminProducts(currentPage, debouncedSearchTerm);
     };
     
     const PaginationControls = () => {
-        const { page, pages, total } = adminProductsPagination;
+        const { page, pages, total } = adminProductsPagination || { page: 1, pages: 1, total: 0 };
         if (pages <= 1) return null;
 
         return (
@@ -456,6 +464,7 @@ const AdminProductsPage: React.FC = () => {
                     {isLoading ? <TableSkeleton cols={6} rows={5} /> : (
                         <tbody>
                             {adminProducts.map(product => {
+                                // Helper to safely get display order for the table view
                                 const getOrderDisplay = (val: number | undefined) => {
                                     if (val === undefined || val === null || val === 0 || val === 1000) return '-';
                                     return val;
@@ -494,7 +503,9 @@ const AdminProductsPage: React.FC = () => {
                     </div>
                 )}
             </div>
+            
             <PaginationControls />
+
             {isModalOpen && <ProductFormModal product={editingProduct} onSave={handleSave} onClose={() => setIsModalOpen(false)} />}
         </div>
     );
