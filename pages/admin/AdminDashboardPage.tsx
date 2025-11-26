@@ -1,7 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Order } from '../../types';
-import { ShoppingBag, ListOrdered, DollarSign, CreditCard, RefreshCw } from 'lucide-react';
+import { ShoppingBag, ListOrdered, DollarSign, CreditCard } from 'lucide-react';
 import { useAppStore } from '../../store';
 
 const getStatusColor = (status: Order['status']) => {
@@ -27,40 +27,11 @@ const StatCard: React.FC<{ title: string, value: string, icon: React.ElementType
 );
 
 const AdminDashboardPage: React.FC = () => {
-    const { 
-        orders, 
-        navigate, 
-        adminProductsPagination, 
-        loadAdminProducts, 
-        refreshAdminData 
-    } = useAppStore();
-    
-    const [isRefreshing, setIsRefreshing] = useState(false);
-
-    useEffect(() => {
-        // Fetch fresh data on mount to ensure counts are accurate
-        loadAdminProducts(1, '');
-        refreshAdminData();
-    }, [loadAdminProducts, refreshAdminData]);
-
-    const handleRefresh = async () => {
-        setIsRefreshing(true);
-        await Promise.all([
-            loadAdminProducts(1, ''),
-            refreshAdminData()
-        ]);
-        setIsRefreshing(false);
-    };
-
-    // Calculate Revenue: Exclude 'Cancelled' orders to show actual earnings
-    const totalRevenue = orders
-        .filter(order => order.status !== 'Cancelled')
-        .reduce((sum, order) => sum + order.total, 0);
-
+    const { products, orders, navigate } = useAppStore();
+    const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
     const recentOrders = [...orders].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
     
     const onlineTransactionsCount = orders.filter(o => o.paymentMethod === 'Online').length;
-    
     const recentPaymentRecords = orders
         .filter(o => o.paymentMethod === 'Online' && o.paymentDetails)
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
@@ -69,20 +40,9 @@ const AdminDashboardPage: React.FC = () => {
 
     return (
         <div>
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-3xl font-bold text-gray-800">Dashboard</h1>
-                <button 
-                    onClick={handleRefresh} 
-                    disabled={isRefreshing}
-                    className={`p-2 bg-white border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 hover:text-pink-600 transition shadow-sm ${isRefreshing ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    title="Refresh Data"
-                >
-                    <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
-                </button>
-            </div>
-
+            <h1 className="text-3xl font-bold text-gray-800 mb-6">Dashboard</h1>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <StatCard title="Total Products" value={(adminProductsPagination?.total || 0).toString()} icon={ShoppingBag} />
+                <StatCard title="Total Products" value={products.length.toString()} icon={ShoppingBag} />
                 <StatCard title="Total Orders" value={orders.length.toString()} icon={ListOrdered} />
                 <StatCard title="Total Revenue" value={`৳${totalRevenue.toLocaleString('en-IN')}`} icon={DollarSign} />
                 <StatCard title="Online Transactions" value={onlineTransactionsCount.toString()} icon={CreditCard} />
