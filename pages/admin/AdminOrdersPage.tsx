@@ -1,7 +1,8 @@
 
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { Order, CartItem, OrderStatus } from '../../types';
-import { Search, X, Trash2 } from 'lucide-react';
+import { Search, X, Trash2, RefreshCw } from 'lucide-react';
 // FIX: Corrected the import path for `useAppStore` from the non-existent 'StoreContext.tsx' to the correct location 'store/index.ts'.
 import { useAppStore } from '../../store';
 
@@ -96,9 +97,10 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ order, onClose, u
 };
 
 const AdminOrdersPage: React.FC = () => {
-  const { orders, updateOrderStatus, deleteOrder } = useAppStore();
+  const { orders, updateOrderStatus, deleteOrder, refreshOrders } = useAppStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     // This effect syncs the selected order with the main orders list.
@@ -117,6 +119,12 @@ const AdminOrdersPage: React.FC = () => {
     }
   }, [orders, selectedOrder]);
 
+  const handleRefresh = async () => {
+      setIsRefreshing(true);
+      await refreshOrders();
+      setIsRefreshing(false);
+  };
+
   const filteredOrders = useMemo(() => {
     return orders.filter(order => 
       (order.customerName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
@@ -133,7 +141,17 @@ const AdminOrdersPage: React.FC = () => {
   return (
     <div>
         <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-            <h1 className="text-3xl font-bold text-gray-800">Orders</h1>
+            <div className="flex items-center gap-3">
+                <h1 className="text-3xl font-bold text-gray-800">Orders</h1>
+                <button 
+                    onClick={handleRefresh} 
+                    disabled={isRefreshing}
+                    className="p-2 bg-white border border-gray-200 text-gray-600 hover:bg-pink-50 hover:text-pink-600 rounded-full transition-all shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Refresh Orders List"
+                >
+                    <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                </button>
+            </div>
             <div className="relative w-full md:w-64">
                 <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
                 <input 
