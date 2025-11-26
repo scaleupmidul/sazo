@@ -1,5 +1,3 @@
-
-
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { AppState, Product, CartItem, Order, OrderStatus, ContactMessage, AppSettings, AdminProductsResponse } from '../types';
@@ -314,14 +312,6 @@ export const useAppStore = create<AppState>()(
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify(productData),
             });
-            
-            if (!res.ok) {
-                const errorData = await res.json().catch(() => ({}));
-                const errorMessage = errorData.message || "Failed to add product. Please check your input.";
-                get().notify(errorMessage, 'error');
-                throw new Error(errorMessage);
-            }
-
             const newProduct = await res.json();
             set(state => ({ products: [newProduct, ...state.products] }));
             get().notify('Product added successfully!', 'success');
@@ -334,14 +324,6 @@ export const useAppStore = create<AppState>()(
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify(updatedProduct),
             });
-
-            if (!res.ok) {
-                const errorData = await res.json().catch(() => ({}));
-                const errorMessage = errorData.message || "Failed to update product.";
-                get().notify(errorMessage, 'error');
-                throw new Error(errorMessage);
-            }
-
             const savedProduct = await res.json();
             set(state => ({
                 products: state.products.map(p => p.id === savedProduct.id ? savedProduct : p)
