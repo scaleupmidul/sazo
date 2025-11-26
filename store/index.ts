@@ -1,11 +1,9 @@
 
-
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { AppState, Product, CartItem, Order, OrderStatus, ContactMessage, AppSettings, AdminProductsResponse } from '../types';
 
-// Use environment variable for API URL if available, fallback to proxy path
-const API_URL = (import.meta as any).env.VITE_API_URL || '/api';
+const API_URL = '/api';
 
 const getTokenFromStorage = (): string | null => {
     return localStorage.getItem('sazo_admin_token');
@@ -28,9 +26,6 @@ export const useAppStore = create<AppState>()(
         path: window.location.pathname,
         products: [],
         orders: [],
-        ordersPagination: { page: 1, pages: 1, total: 0 },
-        paymentRecords: [],
-        paymentRecordsPagination: { page: 1, pages: 1, total: 0 },
         contactMessages: [],
         settings: DEFAULT_SETTINGS,
         cart: [],
@@ -53,17 +48,10 @@ export const useAppStore = create<AppState>()(
         },
 
         loadInitialData: async () => {
-            // PERFORMANCE: Use cached settings for immediate UI rendering if available
-            const currentSettings = get().settings;
-            const hasCachedSettings = currentSettings && currentSettings.adminEmail !== '';
-            
-            if (!hasCachedSettings) {
-                set({ loading: true });
-            }
-
+            set({ loading: true });
             const { isAdminAuthenticated, notify } = get();
             try {
-                // Fetch optimized homepage data
+                // Fetch optimized homepage data first for a fast initial load
                 const homeDataRes = await fetch(`${API_URL}/page-data/home`);
                 if (!homeDataRes.ok) {
                     throw new Error('Failed to fetch initial page data.');
@@ -73,166 +61,46 @@ export const useAppStore = create<AppState>()(
                     products: homeData.products,
                     settings: homeData.settings,
                     fullProductsLoaded: false,
-                    loading: false, 
                 });
 
-                // If admin is logged in, ONLY fetch messages initially.
-                // Orders and heavy stats should be loaded on demand by specific pages.
+                // If admin is logged in, fetch admin-specific data including stats
                 if (isAdminAuthenticated) {
                     const token = getTokenFromStorage();
                     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-                    // Fetch messages to show notification badge count in sidebar
-                    const messagesRes = await fetch(`${API_URL}/messages`, { headers });
+                    const [ordersRes, messagesRes, statsRes] = await Promise.all([
+                        fetch(`${API_URL}/orders`, { headers }),
+                        fetch(`${API_URL}/messages`, { headers }),
+                        fetch(`${API_URL}/orders/stats`, { headers })
+                    ]);
 
-                    if (messagesRes.status === 401) {
-                        get().logout();
-                        return;
+                    if (!ordersRes.ok || !messagesRes.ok || !statsRes.ok) {
+                        throw new Error('Failed to fetch admin data.');
                     }
 
-                    if (messagesRes.ok) {
-                        const messagesData = await messagesRes.json();
-                        set({ contactMessages: messagesData });
-                    }
+                    const ordersData = await ordersRes.json();
+                    const messagesData = await messagesRes.json();
+                    const statsData = await statsRes.json();
+                    
+                    set({ 
+                        orders: ordersData, 
+                        contactMessages: messagesData,
+                        dashboardStats: statsData 
+                    });
                 }
             } catch (error) {
                 console.error("Failed to load initial data", error);
-                if (!hasCachedSettings) {
-                    notify("Could not connect to the server.", "error");
-                }
+                notify("Could not connect to the server.", "error");
             } finally {
                 set({ loading: false });
-                // REMOVED: setTimeout(() => { get().ensureAllProductsLoaded(); }, 100);
-                // The automatic fetching of all products (with heavy images) is removed to improve initial load performance.
-                // Products will now be fetched on demand (e.g., when visiting Shop Page or Product Details).
-            }
-        },
-
-        loadDashboardStats: async () => {
-             const token = getTokenFromStorage();
-             if (!token) return;
-
-             try {
-                 const res = await fetch(`${API_URL}/stats`, {
-                     headers: { 'Authorization': `Bearer ${token}` }
-                 });
-
-                 if (res.status === 401) {
-                    get().logout();
-                    get().notify("Session expired. Please log in again.", "error");
-                    return;
-                 }
-
-                 if (!res.ok) throw new Error('Failed to fetch stats');
-                 const data = await res.json();
-                 set({ dashboardStats: data });
-             } catch (error) {
-                 console.error("Failed to load dashboard stats", error);
-             }
-        },
-
-        loadAdminOrders: async (page = 1, searchTerm = '', paymentMethod) => {
-            const token = getTokenFromStorage();
-            if (!token) return;
-
-            try {
-                const params = new URLSearchParams({
-                    page: String(page),
-                    limit: '20', // Fetch 20 items per page
-                    search: searchTerm
-                });
-                if (paymentMethod) {
-                    params.append('paymentMethod', paymentMethod);
-                }
-
-                const res = await fetch(`${API_URL}/orders?${params.toString()}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                if (res.status === 401) {
-                    get().logout();
-                    get().notify("Session expired. Please log in again.", "error");
-                    return;
-                }
-
-                if (!res.ok) {
-                    // Try to parse error message, otherwise throw generic
-                    const text = await res.text();
-                    try {
-                        const json = JSON.parse(text);
-                        throw new Error(json.message || 'Failed to fetch orders');
-                    } catch {
-                         throw new Error(`Server Error: ${res.status} ${res.statusText}`);
-                    }
-                }
-
-                const data = await res.json();
-                set({ 
-                    // SAFEGUARD: Ensure orders is always an array, even if API returns null/undefined
-                    orders: Array.isArray(data.orders) ? data.orders : [],
-                    ordersPagination: {
-                        page: data.page || 1,
-                        pages: data.pages || 1,
-                        total: data.total || 0
-                    }
-                });
-            } catch (error: any) {
-                console.error("Failed to load orders", error);
-                // Clear orders on error to avoid showing stale state
-                set({ orders: [], ordersPagination: { page: 1, pages: 1, total: 0 } });
-                get().notify(error.message || "Failed to load orders.", "error");
-            }
-        },
-
-        loadPaymentRecords: async (page = 1, searchTerm = '') => {
-            const token = getTokenFromStorage();
-            if (!token) return;
-
-            try {
-                const params = new URLSearchParams({
-                    page: String(page),
-                    limit: '20',
-                    search: searchTerm,
-                    paymentMethod: 'Online'
-                });
-
-                const res = await fetch(`${API_URL}/orders?${params.toString()}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                if (res.status === 401) {
-                    get().logout();
-                    get().notify("Session expired. Please log in again.", "error");
-                    return;
-                }
-
-                if (!res.ok) {
-                    const text = await res.text();
-                    try {
-                        const json = JSON.parse(text);
-                        throw new Error(json.message || 'Failed to fetch payment records');
-                    } catch {
-                         throw new Error(`Server Error: ${res.status} ${res.statusText}`);
-                    }
-                }
-
-                const data = await res.json();
-                set({ 
-                    paymentRecords: Array.isArray(data.orders) ? data.orders : [],
-                    paymentRecordsPagination: {
-                        page: data.page || 1,
-                        pages: data.pages || 1,
-                        total: data.total || 0
-                    }
-                });
-            } catch (error: any) {
-                console.error("Failed to load payment records", error);
-                set({ paymentRecords: [], paymentRecordsPagination: { page: 1, pages: 1, total: 0 } });
-                get().notify(error.message || "Failed to load payment records.", "error");
+                // After the initial UI render is unblocked, start fetching the rest of the products in the background.
+                setTimeout(() => {
+                    get().ensureAllProductsLoaded();
+                }, 100);
             }
         },
 
         ensureAllProductsLoaded: async () => {
-            const { fullProductsLoaded, products: existingProducts } = get();
+            const { fullProductsLoaded, products: existingProducts, notify } = get();
             if (fullProductsLoaded) return;
     
             try {
@@ -240,6 +108,7 @@ export const useAppStore = create<AppState>()(
                 if (!res.ok) throw new Error('Failed to fetch all products');
                 const allProducts: Product[] = await res.json();
                 
+                // Merge products, giving precedence to the full list but keeping existing ones if not in the new list
                 const productMap = new Map<string, Product>();
                 existingProducts.forEach(p => productMap.set(p.id, p));
                 allProducts.forEach(p => productMap.set(p.id, p));
@@ -248,32 +117,7 @@ export const useAppStore = create<AppState>()(
                 set({ products: mergedProducts, fullProductsLoaded: true });
             } catch (error) {
                 console.error("Failed to load all products", error);
-            }
-        },
-
-        fetchProductDetails: async (id: string) => {
-            const { products } = get();
-            const existing = products.find(p => p.id === id);
-            
-            // Optimistic update: Show what we have immediately
-            if (existing) {
-                set({ selectedProduct: existing });
-            }
-
-            try {
-                const res = await fetch(`${API_URL}/products/${id}`);
-                // If route exists and returns data, update state with full details
-                if (res.ok) {
-                    const fullProduct = await res.json();
-                    set(state => ({
-                        products: state.products.map(p => p.id === id ? fullProduct : p),
-                        selectedProduct: fullProduct
-                    }));
-                } else {
-                    console.warn(`Fetch details failed for ID ${id} with status ${res.status}. Using existing partial data.`);
-                }
-            } catch (error) {
-                console.error("Failed to fetch product details", error);
+                notify("Could not load all products.", "error");
             }
         },
 
@@ -289,13 +133,6 @@ export const useAppStore = create<AppState>()(
                 const res = await fetch(`${API_URL}/products/admin?${params.toString()}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
-
-                if (res.status === 401) {
-                    get().logout();
-                    get().notify("Session expired. Please log in again.", "error");
-                    return;
-                }
-
                 if (!res.ok) throw new Error('Failed to fetch admin products');
                 
                 const data: AdminProductsResponse = await res.json();
@@ -345,6 +182,7 @@ export const useAppStore = create<AppState>()(
                 newCart = [...cart, newItem];
             }
             
+            // Push GA4 add_to_cart event
             window.dataLayer = window.dataLayer || [];
             window.dataLayer.push({ ecommerce: null });
             window.dataLayer.push({
@@ -373,9 +211,11 @@ export const useAppStore = create<AppState>()(
 
             const oldQuantity = cartItem.quantity;
             const quantityDifference = newQuantity - oldQuantity;
+            
+            // Find the full product details for tracking
             const productDetails = products.find(p => p.id === id);
 
-            if (quantityDifference > 0 && productDetails) {
+            if (quantityDifference > 0 && productDetails) { // Item quantity increased
                 window.dataLayer = window.dataLayer || [];
                 window.dataLayer.push({ ecommerce: null });
                 window.dataLayer.push({
@@ -387,12 +227,12 @@ export const useAppStore = create<AppState>()(
                             item_name: productDetails.name,
                             item_category: productDetails.category,
                             price: productDetails.price,
-                            quantity: quantityDifference,
+                            quantity: quantityDifference, // track the number of items added
                             item_variant: size
                         }]
                     }
                 });
-            } else if (quantityDifference < 0 && productDetails) {
+            } else if (quantityDifference < 0 && productDetails) { // Item quantity decreased or removed
                  window.dataLayer = window.dataLayer || [];
                  window.dataLayer.push({ ecommerce: null });
                  window.dataLayer.push({
@@ -404,7 +244,7 @@ export const useAppStore = create<AppState>()(
                             item_name: productDetails.name,
                             item_category: productDetails.category,
                             price: productDetails.price,
-                            quantity: -quantityDifference,
+                            quantity: -quantityDifference, // track the number of items removed
                             item_variant: size
                         }]
                     }
@@ -445,6 +285,8 @@ export const useAppStore = create<AppState>()(
                 const { token } = await res.json();
                 localStorage.setItem('sazo_admin_token', token);
                 set({ isAdminAuthenticated: true });
+                // After login, reload data to fetch stats etc.
+                get().loadInitialData();
                 get().navigate('/admin/dashboard');
                 get().notify('Login successful!', 'success');
                 return true;
@@ -456,8 +298,8 @@ export const useAppStore = create<AppState>()(
 
         logout: () => {
             localStorage.removeItem('sazo_admin_token');
-            set({ isAdminAuthenticated: false, orders: [], contactMessages: [], dashboardStats: null, paymentRecords: [] });
-            get().navigate('/admin/login');
+            set({ isAdminAuthenticated: false, orders: [], contactMessages: [], dashboardStats: null });
+            get().navigate('/');
             get().notify('You have been logged out.', 'success');
         },
 
@@ -505,21 +347,17 @@ export const useAppStore = create<AppState>()(
                 body: JSON.stringify({ status }),
             });
             const updatedOrder = await res.json();
-            
-            // Update both lists to keep them in sync if necessary
             set(state => ({
-                orders: state.orders.map(o => o.id === updatedOrder.id ? updatedOrder : o),
-                paymentRecords: state.paymentRecords.map(o => o.id === updatedOrder.id ? updatedOrder : o)
+                orders: state.orders.map(o => o.id === updatedOrder.id ? updatedOrder : o)
             }));
-            
             get().notify(`Order ${orderId} status updated to ${status}.`, 'success');
         },
 
-        addOrder: async (customerDetails, cartItems, total, paymentInfo, deliveryCharge) => {
+        addOrder: async (customerDetails, cartItems, total, paymentInfo) => {
             const res = await fetch(`${API_URL}/orders`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ customerDetails, cartItems, total, paymentInfo, deliveryCharge }),
+                body: JSON.stringify({ customerDetails, cartItems, total, paymentInfo }),
             });
             
             if (!res.ok) {
@@ -527,7 +365,11 @@ export const useAppStore = create<AppState>()(
                 throw new Error(errorData.message || "Failed to place order. Please check your details.");
             }
             
-            return await res.json();
+            const newOrder = await res.json();
+            if(get().isAdminAuthenticated) {
+                set(state => ({ orders: [newOrder, ...state.orders] }));
+            }
+            return newOrder;
         },
 
         deleteOrder: async (orderId) => {
@@ -536,11 +378,8 @@ export const useAppStore = create<AppState>()(
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` },
             });
-            set(state => ({ 
-                orders: state.orders.filter(order => order.id !== orderId),
-                paymentRecords: state.paymentRecords.filter(order => order.id !== orderId)
-            }));
-            get().notify(`Order has been deleted.`, 'success');
+            set(state => ({ orders: state.orders.filter(order => order.id !== orderId) }));
+            get().notify(`Order ${orderId} has been deleted.`, 'success');
         },
         
         addContactMessage: async (messageData) => {
@@ -584,7 +423,7 @@ export const useAppStore = create<AppState>()(
                     body: JSON.stringify(newSettings),
                 });
                 if (!res.ok) {
-                    const errorData = await res.json().catch(() => ({ message: 'Failed to update settings.' }));
+                    const errorData = await res.json().catch(() => ({ message: 'Failed to update settings. The server returned an invalid response.' }));
                     throw new Error(errorData.message || 'Failed to update settings.');
                 }
                 const updatedSettings = await res.json();
@@ -600,31 +439,31 @@ export const useAppStore = create<AppState>()(
     {
       name: 'sazo-storage',
       storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({ cart: state.cart, settings: state.settings }),
+      // Only persist the 'cart' slice of the state
+      partialize: (state) => ({ cart: state.cart }),
+      // Custom merge function to recalculate cartTotal on rehydration and validate data
       merge: (persistedState: any, currentState: AppState) => {
+        // Safety check: if persisted state is not an object or null, ignore it
         if (!persistedState || typeof persistedState !== 'object') {
             return currentState;
         }
 
-        const { cart, settings } = persistedState;
-
+        // Strict validation for cart items to prevent crashes
         let safeCart: CartItem[] = [];
-        if (Array.isArray(cart)) {
-            safeCart = cart.filter((item: any) => 
-                item && typeof item === 'object' && typeof item.id === 'string' && 
-                typeof item.price === 'number' && !isNaN(item.price) &&
-                typeof item.quantity === 'number' && !isNaN(item.quantity)
+        if (Array.isArray(persistedState.cart)) {
+            safeCart = persistedState.cart.filter((item: any) => 
+                item && 
+                typeof item === 'object' &&
+                typeof item.id === 'string' && 
+                typeof item.price === 'number' && 
+                !isNaN(item.price) &&
+                typeof item.quantity === 'number' &&
+                !isNaN(item.quantity)
             );
         }
 
-        const mergedSettings = settings || currentState.settings;
-
-        const merged = { 
-            ...currentState, 
-            cart: safeCart, 
-            settings: mergedSettings 
-        };
-        
+        const merged = { ...currentState, ...persistedState, cart: safeCart };
+        // Recalculate total based on the validated cart
         merged.cartTotal = safeCart.reduce((total: number, item: CartItem) => total + (item.price * item.quantity), 0);
         
         return merged;
@@ -633,8 +472,10 @@ export const useAppStore = create<AppState>()(
   )
 );
 
+// Initialize popstate listener for browser navigation
 window.addEventListener('popstate', () => {
   useAppStore.setState({ path: window.location.pathname });
 });
 
+// Load initial data when the store is created
 useAppStore.getState().loadInitialData();
