@@ -1,12 +1,10 @@
 
-
-import React, { useEffect, Suspense, lazy } from 'react';
+import React, { useEffect } from 'react';
 import { useAppStore } from './store';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import Notification from './components/Notification';
 import WhatsAppButton from './components/WhatsAppButton';
-import { LoaderCircle } from 'lucide-react';
 
 // Initialize the dataLayer for analytics
 declare global {
@@ -14,7 +12,7 @@ declare global {
 }
 window.dataLayer = window.dataLayer || [];
 
-// Critical Customer Pages - Statically imported for instant navigation (No loading spinners for customers)
+// Statically import all pages to remove loading indicators during navigation
 import HomePage from './pages/HomePage';
 import ShopPage from './pages/ShopPage';
 import ProductDetailsPage from './pages/ProductDetailsPage';
@@ -23,27 +21,15 @@ import CheckoutPage from './pages/CheckoutPage';
 import ContactPage from './pages/ContactPage';
 import PolicyPage from './pages/PolicyPage';
 import ThankYouPage from './pages/ThankYouPage';
+import AdminLoginPage from './pages/admin/AdminLoginPage';
+import AdminLayout from './pages/admin/AdminLayout';
+import AdminDashboardPage from './pages/admin/AdminDashboardPage';
+import AdminProductsPage from './pages/admin/AdminProductsPage';
+import AdminOrdersPage from './pages/admin/AdminOrdersPage';
+import AdminMessagesPage from './pages/admin/AdminMessagesPage';
+import AdminSettingsPage from './pages/admin/AdminSettingsPage';
+import AdminPaymentInfoPage from './pages/admin/AdminPaymentInfoPage';
 
-// Admin Pages - Lazy imported to reduce bundle size for regular customers
-// This significantly improves PageSpeed Insights score on mobile
-const AdminLoginPage = lazy(() => import('./pages/admin/AdminLoginPage'));
-const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'));
-const AdminDashboardPage = lazy(() => import('./pages/admin/AdminDashboardPage'));
-const AdminProductsPage = lazy(() => import('./pages/admin/AdminProductsPage'));
-const AdminOrdersPage = lazy(() => import('./pages/admin/AdminOrdersPage'));
-const AdminMessagesPage = lazy(() => import('./pages/admin/AdminMessagesPage'));
-const AdminSettingsPage = lazy(() => import('./pages/admin/AdminSettingsPage'));
-const AdminPaymentInfoPage = lazy(() => import('./pages/admin/AdminPaymentInfoPage'));
-
-// Loading component for Admin routes
-const AdminLoader = () => (
-  <div className="flex items-center justify-center min-h-screen bg-gray-100">
-    <div className="flex flex-col items-center space-y-3">
-        <LoaderCircle className="w-10 h-10 text-pink-600 animate-spin" />
-        <p className="text-sm text-gray-500 font-medium">Loading Admin Panel...</p>
-    </div>
-  </div>
-);
 
 const App: React.FC = () => {
   const path = useAppStore(state => state.path);
@@ -59,6 +45,10 @@ const App: React.FC = () => {
     const productMatch = path.match(/^\/product\/(.+)$/);
     if (productMatch) {
         const productId = productMatch[1];
+        // FIX: This guard prevents an infinite re-render loop.
+        // It checks if the currently selected product already matches the one in the URL.
+        // This is crucial because the `products` array is a new instance on each fetch,
+        // which would otherwise cause this effect to re-run and re-set the state continuously.
         if (selectedProduct?.id === productId) {
             return;
         }
@@ -73,7 +63,7 @@ const App: React.FC = () => {
   
   useEffect(() => {
     const BASE_TITLE = 'SAZO';
-    let pageTitle = BASE_TITLE; 
+    let pageTitle = BASE_TITLE; // Default title
 
     const productMatch = path.match(/^\/product\/(.+)$/);
     const thankYouMatch = path.match(/^\/thank-you\/(.+)$/);
@@ -121,38 +111,34 @@ const App: React.FC = () => {
   const isCustomerPage = !path.startsWith('/admin');
 
   const renderAdminPageContent = () => {
+     // This function returns the component for a the current admin path, to be rendered inside AdminLayout.
      if (path === '/admin/dashboard') return <AdminDashboardPage />;
      if (path === '/admin/products') return <AdminProductsPage />;
      if (path === '/admin/orders') return <AdminOrdersPage />;
      if (path === '/admin/messages') return <AdminMessagesPage />;
      if (path === '/admin/settings') return <AdminSettingsPage />;
-     if (path === '/admin/payment-info') return <AdminPaymentInfoPage />;
+     if (path === '/admin/payment-info' || path === '/admin/transactions') return <AdminPaymentInfoPage />;
      
+     // Default admin page if authenticated and no specific path matches
      return <AdminDashboardPage />;
   }
 
   const renderPage = () => {
     // Standalone admin login page (no layout)
     if (path === '/admin/login') {
-      return (
-        <Suspense fallback={<AdminLoader />}>
-            <AdminLoginPage />
-        </Suspense>
-      );
+      return <AdminLoginPage />;
     }
 
     // All other admin pages are wrapped in the layout
     if (path.startsWith('/admin')) {
       return (
-        <Suspense fallback={<AdminLoader />}>
-            <AdminLayout>
-                {renderAdminPageContent()}
-            </AdminLayout>
-        </Suspense>
+        <AdminLayout>
+            {renderAdminPageContent()}
+        </AdminLayout>
       );
     }
     
-    // Customer-facing pages (Statically rendered for performance)
+    // Customer-facing pages
     const productMatch = path.match(/^\/product\/(.+)$/);
     if (productMatch) {
       return <ProductDetailsPage />;
@@ -178,6 +164,7 @@ const App: React.FC = () => {
       case '/policy':
         return <PolicyPage />;
       default:
+        // For any other path, show the home page. A 404 page could be added here.
         return <HomePage />;
     }
   };
