@@ -198,4 +198,5 @@ export interface AppState {
   adminProductsPagination: AdminProductsPagination;
   loadAdminProducts: (page: number, searchTerm: string) => Promise<void>;
   dashboardStats: DashboardStats | null;
+  refreshOrders: () => Promise<void>;
 }
