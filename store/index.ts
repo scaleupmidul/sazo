@@ -56,8 +56,12 @@ export const useAppStore = create<AppState>()(
                     throw new Error('Failed to fetch initial page data.');
                 }
                 const homeData = await homeDataRes.json();
+                
+                // Safety check to ensure products is always an array
+                const safeProducts = Array.isArray(homeData.products) ? homeData.products : [];
+                
                 set({
-                    products: homeData.products,
+                    products: safeProducts,
                     settings: homeData.settings,
                     fullProductsLoaded: false,
                 });
@@ -99,7 +103,11 @@ export const useAppStore = create<AppState>()(
 
                 const ordersData = await ordersRes.json();
                 const messagesData = await messagesRes.json();
-                set({ orders: ordersData, contactMessages: messagesData });
+                
+                set({ 
+                    orders: Array.isArray(ordersData) ? ordersData : [], 
+                    contactMessages: Array.isArray(messagesData) ? messagesData : [] 
+                });
             } catch (error) {
                 console.error("Failed to refresh admin data", error);
                 notify("Could not refresh admin data.", "error");
@@ -113,11 +121,17 @@ export const useAppStore = create<AppState>()(
             try {
                 const res = await fetch(`${API_URL}/products`);
                 if (!res.ok) throw new Error('Failed to fetch all products');
-                const allProducts: Product[] = await res.json();
+                const allProductsData = await res.json();
+                const allProducts: Product[] = Array.isArray(allProductsData) ? allProductsData : [];
                 
                 // Merge products, giving precedence to the full list but keeping existing ones if not in the new list
                 const productMap = new Map<string, Product>();
-                existingProducts.forEach(p => productMap.set(p.id, p));
+                
+                // Safety check for existingProducts
+                if (Array.isArray(existingProducts)) {
+                    existingProducts.forEach(p => productMap.set(p.id, p));
+                }
+                
                 allProducts.forEach(p => productMap.set(p.id, p));
                 const mergedProducts = Array.from(productMap.values());
     
@@ -145,7 +159,7 @@ export const useAppStore = create<AppState>()(
                 const data: AdminProductsResponse = await res.json();
                 
                 set({ 
-                    adminProducts: data.products,
+                    adminProducts: Array.isArray(data.products) ? data.products : [],
                     adminProductsPagination: {
                         page: data.page,
                         pages: data.pages,
@@ -158,7 +172,7 @@ export const useAppStore = create<AppState>()(
             }
         },
 
-        setProducts: (products) => set({ products }),
+        setProducts: (products) => set({ products: Array.isArray(products) ? products : [] }),
 
         setSelectedProduct: (product) => set({ selectedProduct: product }),
 
@@ -173,11 +187,12 @@ export const useAppStore = create<AppState>()(
                 return;
             }
             const { cart } = get();
-            const existingItem = cart.find(item => item.id === product.id && item.size === size);
+            const safeCart = Array.isArray(cart) ? cart : [];
+            const existingItem = safeCart.find(item => item.id === product.id && item.size === size);
             let newCart;
             if (existingItem) {
                 get().notify(`Quantity updated for ${product.name} (Size: ${size})!`, 'success');
-                newCart = cart.map(item =>
+                newCart = safeCart.map(item =>
                     item.id === product.id && item.size === size ? { ...item, quantity: item.quantity + quantity } : item
                 );
             } else {
@@ -186,7 +201,7 @@ export const useAppStore = create<AppState>()(
                     image: product.images[0], size: size,
                 };
                 get().notify(`${product.name} (Size: ${size}) added to cart!`, 'success');
-                newCart = [...cart, newItem];
+                newCart = [...safeCart, newItem];
             }
             
             // Push GA4 add_to_cart event
@@ -213,14 +228,17 @@ export const useAppStore = create<AppState>()(
         
         updateCartQuantity: (id, size, newQuantity) => {
             const { cart, products } = get();
-            const cartItem = cart.find(item => item.id === id && item.size === size);
+            const safeCart = Array.isArray(cart) ? cart : [];
+            const safeProducts = Array.isArray(products) ? products : [];
+            
+            const cartItem = safeCart.find(item => item.id === id && item.size === size);
             if (!cartItem) return;
 
             const oldQuantity = cartItem.quantity;
             const quantityDifference = newQuantity - oldQuantity;
             
             // Find the full product details for tracking
-            const productDetails = products.find(p => p.id === id);
+            const productDetails = safeProducts.find(p => p.id === id);
 
             if (quantityDifference > 0 && productDetails) { // Item quantity increased
                 window.dataLayer = window.dataLayer || [];
@@ -260,9 +278,9 @@ export const useAppStore = create<AppState>()(
 
             let newCart;
             if (newQuantity <= 0) {
-                newCart = cart.filter(item => !(item.id === id && item.size === size));
+                newCart = safeCart.filter(item => !(item.id === id && item.size === size));
             } else {
-                newCart = cart.map(item =>
+                newCart = safeCart.map(item =>
                     item.id === id && item.size === size ? { ...item, quantity: newQuantity } : item
                 );
             }
@@ -276,8 +294,10 @@ export const useAppStore = create<AppState>()(
         },
         
         _updateCartTotal: () => {
+            const { cart } = get();
+            const safeCart = Array.isArray(cart) ? cart : [];
             set(state => ({
-                cartTotal: state.cart.reduce((total, item) => total + (item.price * item.quantity), 0)
+                cartTotal: safeCart.reduce((total, item) => total + (item.price * item.quantity), 0)
             }));
         },
 
@@ -316,7 +336,10 @@ export const useAppStore = create<AppState>()(
                 body: JSON.stringify(productData),
             });
             const newProduct = await res.json();
-            set(state => ({ products: [newProduct, ...state.products] }));
+            set(state => {
+                const currentProducts = Array.isArray(state.products) ? state.products : [];
+                return { products: [newProduct, ...currentProducts] };
+            });
             get().notify('Product added successfully!', 'success');
         },
         
@@ -328,9 +351,12 @@ export const useAppStore = create<AppState>()(
                 body: JSON.stringify(updatedProduct),
             });
             const savedProduct = await res.json();
-            set(state => ({
-                products: state.products.map(p => p.id === savedProduct.id ? savedProduct : p)
-            }));
+            set(state => {
+                const currentProducts = Array.isArray(state.products) ? state.products : [];
+                return {
+                    products: currentProducts.map(p => p.id === savedProduct.id ? savedProduct : p)
+                };
+            });
             get().notify('Product updated successfully!', 'success');
         },
 
@@ -340,7 +366,10 @@ export const useAppStore = create<AppState>()(
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` },
             });
-            set(state => ({ products: state.products.filter(p => p.id !== id) }));
+            set(state => {
+                const currentProducts = Array.isArray(state.products) ? state.products : [];
+                return { products: currentProducts.filter(p => p.id !== id) };
+            });
             get().notify('Product deleted successfully.', 'success');
         },
 
@@ -352,9 +381,12 @@ export const useAppStore = create<AppState>()(
                 body: JSON.stringify({ status }),
             });
             const updatedOrder = await res.json();
-            set(state => ({
-                orders: state.orders.map(o => o.id === updatedOrder.id ? updatedOrder : o)
-            }));
+            set(state => {
+                const currentOrders = Array.isArray(state.orders) ? state.orders : [];
+                return {
+                    orders: currentOrders.map(o => o.id === updatedOrder.id ? updatedOrder : o)
+                };
+            });
             get().notify(`Order ${orderId} status updated to ${status}.`, 'success');
         },
 
@@ -372,7 +404,10 @@ export const useAppStore = create<AppState>()(
             
             const newOrder = await res.json();
             if(get().isAdminAuthenticated) {
-                set(state => ({ orders: [newOrder, ...state.orders] }));
+                set(state => {
+                    const currentOrders = Array.isArray(state.orders) ? state.orders : [];
+                    return { orders: [newOrder, ...currentOrders] };
+                });
             }
             return newOrder;
         },
@@ -383,7 +418,10 @@ export const useAppStore = create<AppState>()(
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` },
             });
-            set(state => ({ orders: state.orders.filter(order => order.id !== orderId) }));
+            set(state => {
+                const currentOrders = Array.isArray(state.orders) ? state.orders : [];
+                return { orders: currentOrders.filter(order => order.id !== orderId) };
+            });
             get().notify(`Order ${orderId} has been deleted.`, 'success');
         },
         
@@ -403,9 +441,12 @@ export const useAppStore = create<AppState>()(
                 body: JSON.stringify({ isRead }),
             });
             const updatedMessage = await res.json();
-            set(state => ({
-                contactMessages: state.contactMessages.map(msg => msg.id === updatedMessage.id ? updatedMessage : msg)
-            }));
+            set(state => {
+                const currentMessages = Array.isArray(state.contactMessages) ? state.contactMessages : [];
+                return {
+                    contactMessages: currentMessages.map(msg => msg.id === updatedMessage.id ? updatedMessage : msg)
+                };
+            });
             get().notify(`Message marked as ${isRead ? 'read' : 'unread'}.`, 'success');
         },
 
@@ -415,7 +456,10 @@ export const useAppStore = create<AppState>()(
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` },
             });
-            set(state => ({ contactMessages: state.contactMessages.filter(msg => msg.id !== messageId) }));
+            set(state => {
+                const currentMessages = Array.isArray(state.contactMessages) ? state.contactMessages : [];
+                return { contactMessages: currentMessages.filter(msg => msg.id !== messageId) };
+            });
             get().notify('Message has been deleted.', 'success');
         },
         
