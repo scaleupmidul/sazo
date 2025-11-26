@@ -1,4 +1,5 @@
 
+
 import React, { useState, memo } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { Product } from '../types';
@@ -28,7 +29,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                     className={`object-cover w-full h-full transition-opacity duration-500 group-hover:scale-105 ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
                     loading="lazy"
                     decoding="async"
-                    fetchPriority="low"
                     onLoad={() => setIsImageLoaded(true)}
                 />
                 <div className="absolute top-3 left-3 flex flex-col items-start space-y-1.5">
