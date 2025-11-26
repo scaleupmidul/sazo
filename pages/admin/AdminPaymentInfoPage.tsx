@@ -64,7 +64,12 @@ const AdminPaymentInfoPage: React.FC = () => {
                     <tbody>
                         {filteredRecords.length > 0 ? filteredRecords.map(order => {
                             const cartSubtotal = order.cartItems?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0;
-                            const deliveryCharge = order.total - cartSubtotal;
+                            // Prefer the explicitly stored shippingCharge. 
+                            // If missing (old records), fallback to calculation: Total - Subtotal
+                            // If online payment where total == subtotal, fallback will be 0, which is correct for legacy data logic
+                            const deliveryCharge = order.shippingCharge !== undefined 
+                                ? order.shippingCharge 
+                                : (order.total - cartSubtotal);
 
                             return (
                                 <tr key={order.id} className="bg-white border-b hover:bg-gray-50">
