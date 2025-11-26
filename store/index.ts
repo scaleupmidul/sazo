@@ -1,4 +1,5 @@
 
+
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { AppState, Product, CartItem, Order, OrderStatus, ContactMessage, AppSettings, AdminProductsResponse } from '../types';
@@ -351,6 +352,23 @@ export const useAppStore = create<AppState>()(
                 orders: state.orders.map(o => o.id === updatedOrder.id ? updatedOrder : o)
             }));
             get().notify(`Order ${orderId} status updated to ${status}.`, 'success');
+        },
+
+        refreshOrders: async () => {
+            const token = getTokenFromStorage();
+            if (!token) return;
+            try {
+                const res = await fetch(`${API_URL}/orders`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!res.ok) throw new Error('Failed to fetch orders');
+                const ordersData = await res.json();
+                set({ orders: ordersData });
+                get().notify('Orders list refreshed.', 'success');
+            } catch (error) {
+                console.error("Failed to refresh orders", error);
+                get().notify("Could not refresh orders.", "error");
+            }
         },
 
         addOrder: async (customerDetails, cartItems, total, paymentInfo) => {
