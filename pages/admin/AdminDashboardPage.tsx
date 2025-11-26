@@ -28,7 +28,12 @@ const StatCard: React.FC<{ title: string, value: string, icon: React.ElementType
 
 const AdminDashboardPage: React.FC = () => {
     const { products, orders, navigate } = useAppStore();
-    const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
+    
+    // Calculate revenue: Sum total of all orders EXCEPT those that are Cancelled
+    const totalRevenue = orders
+        .filter(order => order.status !== 'Cancelled')
+        .reduce((sum, order) => sum + order.total, 0);
+
     const recentOrders = [...orders].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
     
     const onlineTransactionsCount = orders.filter(o => o.paymentMethod === 'Online').length;
