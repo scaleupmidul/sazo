@@ -1,11 +1,12 @@
 
 
-import React, { useEffect } from 'react';
+import React, { useEffect, Suspense, lazy } from 'react';
 import { useAppStore } from './store';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import Notification from './components/Notification';
 import WhatsAppButton from './components/WhatsAppButton';
+import { LoaderCircle } from 'lucide-react';
 
 // Initialize the dataLayer for analytics
 declare global {
@@ -13,7 +14,7 @@ declare global {
 }
 window.dataLayer = window.dataLayer || [];
 
-// Statically import all pages to remove loading indicators during navigation
+// Critical Customer Pages - Statically imported for instant navigation (No loading spinners for customers)
 import HomePage from './pages/HomePage';
 import ShopPage from './pages/ShopPage';
 import ProductDetailsPage from './pages/ProductDetailsPage';
@@ -22,15 +23,27 @@ import CheckoutPage from './pages/CheckoutPage';
 import ContactPage from './pages/ContactPage';
 import PolicyPage from './pages/PolicyPage';
 import ThankYouPage from './pages/ThankYouPage';
-import AdminLoginPage from './pages/admin/AdminLoginPage';
-import AdminLayout from './pages/admin/AdminLayout';
-import AdminDashboardPage from './pages/admin/AdminDashboardPage';
-import AdminProductsPage from './pages/admin/AdminProductsPage';
-import AdminOrdersPage from './pages/admin/AdminOrdersPage';
-import AdminMessagesPage from './pages/admin/AdminMessagesPage';
-import AdminSettingsPage from './pages/admin/AdminSettingsPage';
-import AdminPaymentInfoPage from './pages/admin/AdminPaymentInfoPage';
 
+// Admin Pages - Lazy imported to reduce bundle size for regular customers
+// This significantly improves PageSpeed Insights score on mobile
+const AdminLoginPage = lazy(() => import('./pages/admin/AdminLoginPage'));
+const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'));
+const AdminDashboardPage = lazy(() => import('./pages/admin/AdminDashboardPage'));
+const AdminProductsPage = lazy(() => import('./pages/admin/AdminProductsPage'));
+const AdminOrdersPage = lazy(() => import('./pages/admin/AdminOrdersPage'));
+const AdminMessagesPage = lazy(() => import('./pages/admin/AdminMessagesPage'));
+const AdminSettingsPage = lazy(() => import('./pages/admin/AdminSettingsPage'));
+const AdminPaymentInfoPage = lazy(() => import('./pages/admin/AdminPaymentInfoPage'));
+
+// Loading component for Admin routes
+const AdminLoader = () => (
+  <div className="flex items-center justify-center min-h-screen bg-gray-100">
+    <div className="flex flex-col items-center space-y-3">
+        <LoaderCircle className="w-10 h-10 text-pink-600 animate-spin" />
+        <p className="text-sm text-gray-500 font-medium">Loading Admin Panel...</p>
+    </div>
+  </div>
+);
 
 const App: React.FC = () => {
   const path = useAppStore(state => state.path);
@@ -42,11 +55,8 @@ const App: React.FC = () => {
   const isAdminAuthenticated = useAppStore(state => state.isAdminAuthenticated);
   const showWhatsAppButton = useAppStore(state => state.settings.showWhatsAppButton);
 
-  // Normalize path by removing trailing slash (unless it's root '/')
-  const normalizedPath = path === '/' ? path : path.replace(/\/$/, '');
-
   useEffect(() => {
-    const productMatch = normalizedPath.match(/^\/product\/(.+)$/);
+    const productMatch = path.match(/^\/product\/(.+)$/);
     if (productMatch) {
         const productId = productMatch[1];
         if (selectedProduct?.id === productId) {
@@ -59,23 +69,23 @@ const App: React.FC = () => {
             setSelectedProduct(null);
         }
     }
-  }, [normalizedPath, products, selectedProduct, setSelectedProduct]);
+  }, [path, products, selectedProduct, setSelectedProduct]);
   
   useEffect(() => {
     const BASE_TITLE = 'SAZO';
-    let pageTitle = BASE_TITLE; // Default title
+    let pageTitle = BASE_TITLE; 
 
-    const productMatch = normalizedPath.match(/^\/product\/(.+)$/);
-    const thankYouMatch = normalizedPath.match(/^\/thank-you\/(.+)$/);
+    const productMatch = path.match(/^\/product\/(.+)$/);
+    const thankYouMatch = path.match(/^\/thank-you\/(.+)$/);
 
     if (productMatch && selectedProduct) {
         pageTitle = `${selectedProduct.name} - ${BASE_TITLE}`;
     } else if (thankYouMatch) {
         pageTitle = `Order Confirmed! - ${BASE_TITLE}`;
-    } else if (normalizedPath.startsWith('/admin')) {
+    } else if (path.startsWith('/admin')) {
         pageTitle = `Admin Panel - ${BASE_TITLE}`;
     } else {
-        switch (normalizedPath) {
+        switch (path) {
             case '/':
                 pageTitle = `${BASE_TITLE} - Elegant Women's Wear`;
                 break;
@@ -98,58 +108,63 @@ const App: React.FC = () => {
     }
     
     document.title = pageTitle;
-  }, [normalizedPath, selectedProduct]);
+  }, [path, selectedProduct]);
   
   useEffect(() => {
-    const adminPageCheck = normalizedPath.startsWith('/admin') && normalizedPath !== '/admin/login';
+    const adminPageCheck = path.startsWith('/admin') && path !== '/admin/login';
     if (adminPageCheck && !isAdminAuthenticated) {
         navigate('/admin/login');
     }
-  }, [normalizedPath, isAdminAuthenticated, navigate]);
+  }, [path, isAdminAuthenticated, navigate]);
 
 
-  const isCustomerPage = !normalizedPath.startsWith('/admin');
+  const isCustomerPage = !path.startsWith('/admin');
 
   const renderAdminPageContent = () => {
-     if (normalizedPath === '/admin/dashboard') return <AdminDashboardPage />;
-     if (normalizedPath === '/admin/products') return <AdminProductsPage />;
-     if (normalizedPath === '/admin/orders') return <AdminOrdersPage />;
-     if (normalizedPath === '/admin/messages') return <AdminMessagesPage />;
-     if (normalizedPath === '/admin/settings') return <AdminSettingsPage />;
-     if (normalizedPath === '/admin/payment-info') return <AdminPaymentInfoPage />;
+     if (path === '/admin/dashboard') return <AdminDashboardPage />;
+     if (path === '/admin/products') return <AdminProductsPage />;
+     if (path === '/admin/orders') return <AdminOrdersPage />;
+     if (path === '/admin/messages') return <AdminMessagesPage />;
+     if (path === '/admin/settings') return <AdminSettingsPage />;
+     if (path === '/admin/payment-info') return <AdminPaymentInfoPage />;
      
-     // Default admin page if authenticated and no specific path matches
      return <AdminDashboardPage />;
   }
 
   const renderPage = () => {
     // Standalone admin login page (no layout)
-    if (normalizedPath === '/admin/login') {
-      return <AdminLoginPage />;
+    if (path === '/admin/login') {
+      return (
+        <Suspense fallback={<AdminLoader />}>
+            <AdminLoginPage />
+        </Suspense>
+      );
     }
 
     // All other admin pages are wrapped in the layout
-    if (normalizedPath.startsWith('/admin')) {
+    if (path.startsWith('/admin')) {
       return (
-        <AdminLayout>
-            {renderAdminPageContent()}
-        </AdminLayout>
+        <Suspense fallback={<AdminLoader />}>
+            <AdminLayout>
+                {renderAdminPageContent()}
+            </AdminLayout>
+        </Suspense>
       );
     }
     
-    // Customer-facing pages
-    const productMatch = normalizedPath.match(/^\/product\/(.+)$/);
+    // Customer-facing pages (Statically rendered for performance)
+    const productMatch = path.match(/^\/product\/(.+)$/);
     if (productMatch) {
       return <ProductDetailsPage />;
     }
 
-    const thankYouMatch = normalizedPath.match(/^\/thank-you\/(.+)$/);
+    const thankYouMatch = path.match(/^\/thank-you\/(.+)$/);
     if (thankYouMatch) {
         const orderId = thankYouMatch[1];
         return <ThankYouPage orderId={orderId} />;
     }
 
-    switch (normalizedPath) {
+    switch (path) {
       case '/':
         return <HomePage />;
       case '/shop':
