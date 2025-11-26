@@ -1,6 +1,4 @@
 
-
-
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useAppStore } from '../store';
 import { LoaderCircle } from 'lucide-react';
@@ -315,7 +313,7 @@ const CheckoutPage: React.FC = () => {
           cart,
           totalPayable,
           paymentInfo,
-          shippingCharge // Pass selected shipping charge
+          shippingCharge // Pass the raw shipping charge from options
         );
     
         // Priority: Use the friendly orderId if available (numeric 5-7 chars)
