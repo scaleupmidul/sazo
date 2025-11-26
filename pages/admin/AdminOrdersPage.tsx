@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { Order, CartItem, OrderStatus } from '../../types';
-import { Search, X, Trash2 } from 'lucide-react';
+import { Search, X, Trash2, RefreshCw } from 'lucide-react';
 import { useAppStore } from '../../store';
 
 const getStatusColor = (status: OrderStatus) => {
@@ -98,46 +98,69 @@ const AdminOrdersPage: React.FC = () => {
   const { orders, updateOrderStatus, deleteOrder, refreshAdminData } = useAppStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Ensure fresh data is loaded when accessing this page
   useEffect(() => {
-      refreshAdminData();
+      const loadData = async () => {
+          setIsRefreshing(true);
+          await refreshAdminData();
+          setIsRefreshing(false);
+      };
+      loadData();
   }, [refreshAdminData]);
 
   useEffect(() => {
     // This effect syncs the selected order with the main orders list.
-    // This is crucial for reflecting status updates in the modal in real-time.
     if (selectedOrder) {
       const updatedOrderInList = orders.find(o => o.id === selectedOrder.id);
       if (updatedOrderInList) {
-        // Only update state if the order data has actually changed to prevent infinite loops.
         if (JSON.stringify(updatedOrderInList) !== JSON.stringify(selectedOrder)) {
             setSelectedOrder(updatedOrderInList);
         }
       } else {
-        // If the order is no longer in the list (e.g., deleted), close the modal.
         setSelectedOrder(null);
       }
     }
   }, [orders, selectedOrder]);
 
   const filteredOrders = useMemo(() => {
-    return orders.filter(order => 
-      order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (order.orderId || order.id).toLowerCase().includes(searchTerm.toLowerCase()) // Search by new numeric ID too
-    ).sort((a, b) => {
+    const safeOrders = Array.isArray(orders) ? orders : [];
+    
+    return safeOrders.filter(order => {
+        const customerName = order.customerName?.toLowerCase() || '';
+        const orderId = (order.orderId || order.id || '').toLowerCase();
+        const search = searchTerm.toLowerCase();
+        
+        return customerName.includes(search) || orderId.includes(search);
+    }).sort((a, b) => {
         // Sort by Date Descending (Newest first)
-        const dateComparison = b.date.localeCompare(a.date);
+        const dateComparison = new Date(b.date).getTime() - new Date(a.date).getTime();
         if (dateComparison !== 0) return dateComparison;
-        // Fallback to ID Descending (assuming Mongo ID is roughly time-sequential)
+        // Fallback to ID Descending
         return b.id.localeCompare(a.id);
     });
   }, [orders, searchTerm]);
 
+  const handleManualRefresh = async () => {
+      setIsRefreshing(true);
+      await refreshAdminData();
+      setIsRefreshing(false);
+  };
+
   return (
     <div>
         <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-            <h1 className="text-3xl font-bold text-gray-800">Orders</h1>
+            <div className="flex items-center gap-4">
+                <h1 className="text-3xl font-bold text-gray-800">Orders</h1>
+                <button 
+                    onClick={handleManualRefresh}
+                    className={`p-2 rounded-full bg-white border border-gray-300 hover:bg-gray-50 text-pink-600 transition ${isRefreshing ? 'animate-spin' : ''}`}
+                    title="Refresh Orders"
+                >
+                    <RefreshCw className="w-5 h-5" />
+                </button>
+            </div>
             <div className="relative w-full md:w-64">
                 <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
                 <input 
@@ -179,7 +202,9 @@ const AdminOrdersPage: React.FC = () => {
                         </tr>
                     )) : (
                         <tr>
-                            <td colSpan={5} className="px-6 py-10 text-center text-gray-500">No orders found.</td>
+                            <td colSpan={5} className="px-6 py-10 text-center text-gray-500">
+                                {isRefreshing ? 'Loading orders...' : 'No orders found.'}
+                            </td>
                         </tr>
                     )}
                 </tbody>
