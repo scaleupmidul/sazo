@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useCallback, memo } from 'react';
 import { useAppStore } from '../store';
 
@@ -32,17 +31,13 @@ const HeroSlider: React.FC = () => {
     }
 
     // Show Big Skeleton while loading settings OR if no slides are found
-    // This removes the ugly text and keeps the layout consistent
     if (loading || totalSlides === 0) {
         return (
             <section className="relative w-full aspect-[4/3] sm:aspect-[16/7] md:aspect-[16/7] lg:aspect-[16/6] xl:aspect-[16/6] bg-stone-200 animate-pulse">
                 <div className="absolute inset-0 flex items-center justify-start p-6 sm:p-10 md:p-16">
                     <div className="max-w-md space-y-4 w-full">
-                        {/* Title Skeleton */}
                         <div className="h-10 sm:h-14 bg-stone-300 rounded w-3/4"></div>
-                        {/* Subtitle Skeleton */}
                         <div className="h-4 sm:h-6 bg-stone-300 rounded w-1/2"></div>
-                        {/* Button Skeleton */}
                         <div className="h-10 sm:h-12 bg-stone-300 rounded-full w-32 mt-6"></div>
                     </div>
                 </div>
@@ -56,25 +51,41 @@ const HeroSlider: React.FC = () => {
     return (
         <section className="relative w-full h-full aspect-[4/3] sm:aspect-[16/7] md:aspect-[16/7] lg:aspect-[16/6] xl:aspect-[16/6] bg-stone-200">
             <div className="w-full h-full relative overflow-hidden">
-                {sliderImages.map((slide, index) => (
-                    <div
-                        key={slide.id}
-                        className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${index === currentSlide ? 'opacity-100 z-10' : 'opacity-0'}`}
-                    >
-                        <picture className="w-full h-full">
-                            {slide.mobileImage && <source media="(max-width: 640px)" srcSet={slide.mobileImage} />}
-                            <img
-                                src={slide.image}
-                                alt={slide.title}
-                                className="object-cover w-full h-full transition-opacity duration-500"
-                                onLoad={() => handleImageLoad(index)}
-                                decoding="async"
-                                style={{ opacity: loadedSlides[index] ? 1 : 0 }}
-                            />
-                        </picture>
-                        <div className={`absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent transition-opacity duration-300 ${loadedSlides[index] ? 'opacity-100' : 'opacity-0'}`}></div>
-                    </div>
-                ))}
+                {sliderImages.map((slide, index) => {
+                    // LCP Optimization: First slide gets priority
+                    const isFirstSlide = index === 0;
+                    
+                    return (
+                        <div
+                            key={slide.id}
+                            className={`absolute inset-0 transition-opacity ease-in-out ${
+                                index === currentSlide ? 'opacity-100 z-10' : 'opacity-0'
+                            } ${
+                                // Reduce transition duration for the first slide to paint faster
+                                isFirstSlide ? 'duration-300' : 'duration-1000'
+                            }`}
+                        >
+                            <picture className="w-full h-full">
+                                {slide.mobileImage && <source media="(max-width: 640px)" srcSet={slide.mobileImage} />}
+                                <img
+                                    src={slide.image}
+                                    alt={slide.title}
+                                    className="object-cover w-full h-full"
+                                    onLoad={() => handleImageLoad(index)}
+                                    // Critical LCP Fixes:
+                                    loading={isFirstSlide ? "eager" : "lazy"}
+                                    fetchPriority={isFirstSlide ? "high" : "auto"}
+                                    decoding={isFirstSlide ? "sync" : "async"}
+                                    style={{ 
+                                        opacity: loadedSlides[index] ? 1 : 0,
+                                        transition: 'opacity 0.5s ease-in-out' 
+                                    }}
+                                />
+                            </picture>
+                            <div className={`absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-transparent transition-opacity duration-300 ${loadedSlides[index] ? 'opacity-100' : 'opacity-0'}`}></div>
+                        </div>
+                    );
+                })}
             </div>
             
             <div className={`absolute inset-0 flex items-center justify-start p-6 sm:p-10 md:p-16 z-20 transition-opacity duration-700 ${isCurrentSlideImageLoaded ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
