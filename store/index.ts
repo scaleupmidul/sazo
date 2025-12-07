@@ -1,5 +1,4 @@
 
-
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { AppState, Product, CartItem, Order, OrderStatus, ContactMessage, AppSettings, AdminProductsResponse } from '../types';
@@ -401,7 +400,10 @@ export const useAppStore = create<AppState>()(
             });
             const savedProduct = await res.json();
             set(state => ({
-                products: state.products.map(p => p.id === savedProduct.id ? savedProduct : p)
+                products: state.products.map(p => p.id === savedProduct.id ? savedProduct : p),
+                // IMPORTANT: Also update the selectedProduct if it matches the one being updated
+                // This ensures admin edits are reflected immediately on the product details page
+                selectedProduct: state.selectedProduct?.id === savedProduct.id ? savedProduct : state.selectedProduct
             }));
             get().notify('Product updated successfully!', 'success');
         },
