@@ -1,5 +1,3 @@
-// App.tsx
-
 import React, { useEffect, Suspense } from 'react';
 import { useAppStore } from './store';
 import Header from './components/Header';
@@ -8,7 +6,7 @@ import Notification from './components/Notification';
 import WhatsAppButton from './components/WhatsAppButton';
 import PageLoader from './components/PageLoader';
 
-// Code Splitting: Pages are loaded only when visited
+// FULL LAZY LOADING: Split every page into its own chunk to minimize initial bundle size
 const HomePage = React.lazy(() => import('./pages/HomePage'));
 const ShopPage = React.lazy(() => import('./pages/ShopPage'));
 const ProductDetailsPage = React.lazy(() => import('./pages/ProductDetailsPage'));
@@ -18,7 +16,7 @@ const ContactPage = React.lazy(() => import('./pages/ContactPage'));
 const PolicyPage = React.lazy(() => import('./pages/PolicyPage'));
 const ThankYouPage = React.lazy(() => import('./pages/ThankYouPage'));
 
-// Admin Pages (Loaded only for admins)
+// Admin Pages (Already Lazy)
 const AdminLoginPage = React.lazy(() => import('./pages/admin/AdminLoginPage'));
 const AdminLayout = React.lazy(() => import('./pages/admin/AdminLayout'));
 const AdminDashboardPage = React.lazy(() => import('./pages/admin/AdminDashboardPage'));
@@ -47,7 +45,9 @@ const App: React.FC = () => {
   useEffect(() => {
     const productMatch = path.match(/^\/product\/(.+)$/);
     if (productMatch) {
+        // Sanitize ID: Remove any query parameters (e.g., ?fbclid=...)
         const productId = productMatch[1].split('?')[0];
+        
         if (selectedProduct?.id === productId) {
             return;
         }
@@ -139,8 +139,9 @@ const App: React.FC = () => {
       );
     }
     
+    // CUSTOMER PAGES - Wrapped in Suspense for Lazy Loading
     return (
-        <Suspense fallback={<div className="min-h-[60vh] flex items-center justify-center"><PageLoader /></div>}>
+        <Suspense fallback={<PageLoader />}>
             {(() => {
                 const productMatch = path.match(/^\/product\/(.+)$/);
                 if (productMatch) {
@@ -182,6 +183,7 @@ const App: React.FC = () => {
             font-family: 'Inter', sans-serif;
           }
 
+          /* Global width fix for mobile zoom issues */
           html {
             width: 100%;
             overflow-x: hidden;
@@ -203,6 +205,7 @@ const App: React.FC = () => {
           h2, .font-display-lg { font-weight: 600; }
           h3, .font-display-md { font-weight: 600; }
 
+          /* Override browser autofill styles */
           input:-webkit-autofill,
           input:-webkit-autofill:hover, 
           input:-webkit-autofill:focus, 
@@ -250,7 +253,7 @@ const App: React.FC = () => {
 
       <Notification notification={notification} />
       {isCustomerPage && <Header />}
-      <div className="flex-grow flex flex-col">
+      <div className="flex-grow flex flex-col relative">
           {renderPage()}
       </div>
       {isCustomerPage && showWhatsAppButton && <WhatsAppButton />}
