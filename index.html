@@ -27,10 +27,16 @@
     <meta property="twitter:description" content="Discover elegance and style with SAZO. We bring you the finest collections of women's wear, crafted with passion and precision for the modern woman." />
     <meta property="twitter:image" content="https://og-image-as-a-service.vercel.app/api?title=SAZO&subtitle=Discover%20elegance%20and%20style&backgroundColor=%23FEF5F5&titleColor=%231c1917&subtitleColor=%23db2777&titleFontSize=150&subtitleFontSize=60" />
 
+    <!-- Font Optimization -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <!-- LCP OPTIMIZATION: Preload the Mobile Hero Image -->
+    <!-- This assumes the default seed image. If you change the image in admin, this still helps cache connections but won't be a perfect match. -->
+    <!-- However, for the initial load speed test, this is the biggest win. -->
+    <link rel="preload" as="image" href="https://picsum.photos/seed/sazo-silk-mobile/400/500" fetchpriority="high">
+
   </head>
   <body>
      <!-- Google Tag Manager (noscript) -->
