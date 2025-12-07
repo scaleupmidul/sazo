@@ -8,14 +8,7 @@ export default defineConfig({
   plugins: [react()],
   build: {
     outDir: 'dist',
-    sourcemap: false,
-    rollupOptions: {
-      output: {
-        manualChunks: {
-            vendor: ['react', 'react-dom', 'zustand', 'lucide-react', 'bcryptjs']
-        }
-      },
-    },
+
     chunkSizeWarningLimit: 1000,
   },
 });
