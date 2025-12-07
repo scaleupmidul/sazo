@@ -26,7 +26,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, priority = false }) 
                 <img
                     src={product.images[0]}
                     alt={product.name}
-                    className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 group-hover:scale-105 ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
+                    className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
                     // Optimized loading: Only use eager for top items (priority=true), else lazy
                     loading={priority ? "eager" : "lazy"}
                     // @ts-ignore
