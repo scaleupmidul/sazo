@@ -1,4 +1,3 @@
-
 import express from 'express';
 import Product from '../models/Product.js';
 import { protect } from '../middleware/authMiddleware.js';
@@ -38,12 +37,14 @@ router.get('/admin', protect, async (req, res) => {
 });
 
 
-// @desc    Fetch all products
+// @desc    Fetch all products (Optimized for Shop Page)
 // @route   GET /api/products
 // @access  Public
 router.get('/', async (req, res) => {
   try {
-    const products = await Product.find({}).sort({ createdAt: -1 });
+    // OPTIMIZATION: Only fetch the first image for the shop list.
+    // The details page (/:id) will fetch all images separately.
+    const products = await Product.find({}, { images: { $slice: 1 } }).sort({ createdAt: -1 });
     res.json(products);
   } catch (error) {
     res.status(500).json({ message: 'Server Error' });
