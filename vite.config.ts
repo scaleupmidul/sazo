@@ -11,22 +11,11 @@ export default defineConfig({
     sourcemap: false,
     rollupOptions: {
       output: {
-        manualChunks: (id) => {
-          if (id.includes('node_modules')) {
-            if (id.includes('react') || id.includes('react-dom')) {
-              return 'react-vendor';
-            }
-            if (id.includes('lucide-react')) {
-              return 'icons';
-            }
-            if (id.includes('zustand') || id.includes('bcryptjs')) {
-                return 'app-utils';
-            }
-            return 'vendor'; // Fallback for other deps
-          }
-        },
+        manualChunks: {
+            vendor: ['react', 'react-dom', 'zustand', 'lucide-react', 'bcryptjs']
+        }
       },
     },
-    chunkSizeWarningLimit: 800,
+    chunkSizeWarningLimit: 1000,
   },
 });
