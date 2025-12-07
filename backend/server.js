@@ -1,10 +1,9 @@
+
 import express from 'express';
 import cors from 'cors';
 import 'dotenv/config';
 import bcrypt from 'bcryptjs';
 import compression from 'compression';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
 import connectDB from './db.js';
 
@@ -16,130 +15,83 @@ import productRoutes from './routes/products.js';
 import orderRoutes from './routes/orders.js';
 import messageRoutes from './routes/messages.js';
 import settingsRoutes from './routes/settings.js';
+import statsRoutes from './routes/stats.js';
 
 import { MOCK_PRODUCTS_DATA, DEFAULT_SETTINGS_DATA } from './data/seedData.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 
-// --- Performance Optimization ---
-// Enable Gzip compression for all responses
-app.use(compression());
-
-// --- Middleware ---
+// Middlewares
 app.use(cors());
-app.use(express.json({ limit: '50mb' }));
+// Gzip Compression: Reduces payload size by 70-80%, saving bandwidth and speeding up load times
+app.use(compression());
+app.use(express.json({ limit: '50mb' })); // Increase limit for base64 images
 
-// --- Database Connection & Seeding ---
-let isSeedingComplete = false;
-const initializeDatabase = async () => {
-    if (isSeedingComplete) return;
-
-    try {
-        const settingsCount = await Settings.countDocuments();
-        if (settingsCount === 0) {
-            console.log('No settings found, seeding...');
-            const salt = await bcrypt.genSalt(10);
-            const hashedPassword = await bcrypt.hash(DEFAULT_SETTINGS_DATA.adminPassword, salt);
-            await Settings.create({ ...DEFAULT_SETTINGS_DATA, adminPassword: hashedPassword });
-        }
-
-        const productCount = await Product.countDocuments();
-        if (productCount === 0) {
-            console.log('No products found, seeding...');
-            const productsToSeed = MOCK_PRODUCTS_DATA.map(({ id, ...rest }) => rest);
-            await Product.insertMany(productsToSeed);
-        }
-        
-        isSeedingComplete = true;
-    } catch (error) {
-        console.error('Error during database initialization:', error);
-    }
-};
-
+// --- Database Connection Middleware ---
 const dbConnectionMiddleware = async (req, res, next) => {
     try {
         await connectDB();
-        await initializeDatabase();
         next();
     } catch (error) {
-        console.error("Database error:", error);
-        res.status(503).json({ message: "Service Unavailable" });
+        console.error("Database connection failed:", error);
+        res.status(503).json({ message: "Service Unavailable: Could not connect to the database." });
     }
 };
 
-// --- API Routes ---
+// Apply middleware to all API routes
 app.use('/api', dbConnectionMiddleware);
 
+// --- New Homepage Data Route ---
 app.get('/api/page-data/home', async (req, res) => {
     try {
-        // PERFORMANCE: Use .lean() for faster reads
-        const settings = await Settings.findOne().select('-adminPassword').lean();
-        
-        // OPTIMIZATION: 
-        // 1. Fetch only 1st image ({ $slice: 1 })
-        // 2. Use .lean() to return plain JSON instead of heavy Mongoose Docs
-        const products = await Product.find(
-            { $or: [{ isNewArrival: true }, { isTrending: true }] },
-            { images: { $slice: 1 } }
-        )
-        .sort({ displayOrder: 1, createdAt: -1 })
-        .lean();
+        // PERFORMANCE: Add Cache-Control header
+        res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
 
-        if (!settings) return res.status(404).json({ message: 'Settings not found' });
-        
-        // Fix: Manually map _id to id for .lean() queries to prevent frontend crashes
-        const formattedProducts = products.map(p => ({
-            ...p,
-            id: p._id.toString(),
-            _id: undefined,
-            __v: undefined
-        }));
-        
-        // Fix settings object
-        if (settings._id) {
-            delete settings._id;
-            delete settings.__v;
+        // PERFORMANCE: Use Promise.all to fetch Settings and Products in parallel
+        // PERFORMANCE: Use .lean() to return plain JS objects instead of heavy Mongoose documents
+        const [settings, products] = await Promise.all([
+            Settings.findOne().select('-adminPassword').lean(),
+            Product.find({ $or: [{ isNewArrival: true }, { isTrending: true }] })
+                .sort({ displayOrder: 1, createdAt: -1 })
+                .lean()
+        ]);
+
+        if (!settings) {
+            return res.json({ settings: DEFAULT_SETTINGS_DATA, products: [] });
         }
+        
+        const transformId = (doc) => {
+            if (!doc) return doc;
+            const { _id, __v, ...rest } = doc;
+            return { id: _id.toString(), ...rest };
+        };
 
-        res.json({ settings: settings, products: formattedProducts });
+        const settingsObj = transformId(settings);
+        
+        // LITE MODE: Send only the first image for the listing page to save bandwidth
+        const productsList = products.map(p => {
+            const transformed = transformId(p);
+            if (transformed.images && transformed.images.length > 1) {
+                // Keep only the first image for the thumbnail
+                transformed.images = [transformed.images[0]];
+            }
+            return transformed;
+        });
+
+        res.json({ settings: settingsObj, products: productsList });
     } catch (error) {
-        console.error("Home data error:", error);
-        res.status(500).json({ message: 'Server Error' });
+        console.error('Error fetching homepage data:', error);
+        res.status(500).json({ message: 'Server Error fetching homepage data' });
     }
 });
 
+
+// API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/settings', settingsRoutes);
-
-// --- Serve Static Frontend (Production) ---
-const distPath = path.join(__dirname, '../dist');
-
-// Serve static files with aggressive caching (1 year) to improve speed index
-app.use(express.static(distPath, { 
-    maxAge: '1y',
-    etag: false
-}));
-
-// Handle React Routing, return all requests to React app
-app.get('*', (req, res) => {
-  res.sendFile(path.join(distPath, 'index.html'));
-});
-
-// --- Server Start ---
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, async () => {
-    console.log(`Server running on port ${PORT}`);
-    try {
-        await connectDB();
-        await initializeDatabase();
-        console.log("Database initialized on startup.");
-    } catch (e) {
-        console.error("Startup DB connection failed:", e);
-    }
-});
+app.use('/api/stats', statsRoutes);
 
 export default app;
