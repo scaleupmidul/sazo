@@ -26,9 +26,15 @@ router.get('/admin', protect, async (req, res) => {
             .limit(pageSize)
             .skip(pageSize * (page - 1))
             .lean();
+            
+        // Map _id to id for admin table
+        const formattedProducts = products.map(p => ({
+            ...p,
+            id: p._id.toString()
+        }));
 
         res.json({
-            products,
+            products: formattedProducts,
             page,
             pages: Math.ceil(count / pageSize),
             total: count
@@ -51,8 +57,16 @@ router.get('/', async (req, res) => {
     const products = await Product.find({}, { images: { $slice: 1 } })
       .sort({ createdAt: -1 })
       .lean();
+    
+    // Fix: Manually map _id to id
+    const formattedProducts = products.map(p => ({
+        ...p,
+        id: p._id.toString(),
+        _id: undefined,
+        __v: undefined
+    }));
       
-    res.json(products);
+    res.json(formattedProducts);
   } catch (error) {
     res.status(500).json({ message: 'Server Error' });
   }
