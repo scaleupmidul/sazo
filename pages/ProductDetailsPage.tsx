@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Product } from '../types';
 import { ShoppingCart, ChevronDown, X, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -46,14 +47,33 @@ const ProductDetailsPageSkeleton: React.FC = () => (
 );
 
 const ProductDetailsPage: React.FC = () => {
-  const { product, settings, navigate, addToCart, notify, loading } = useAppStore(state => ({
+  const { product, settings, navigate, addToCart, notify, loading, refreshProduct } = useAppStore(state => ({
     product: state.selectedProduct,
     settings: state.settings,
     navigate: state.navigate,
     addToCart: state.addToCart,
     notify: state.notify,
-    loading: state.loading
+    loading: state.loading,
+    refreshProduct: state.refreshProduct
   }));
+
+  // FETCH FRESH DATA ON MOUNT
+  // This ensures that even if the 'products' list in the store is stale (cached),
+  // we fetch the latest images and details for the currently viewed product.
+  useEffect(() => {
+    // Priority 1: Use the product ID if already selected
+    if (product?.id) {
+        refreshProduct(product.id);
+    } else {
+        // Priority 2: Extract ID from URL if directly landing on page or refresh
+        const pathParts = window.location.pathname.split('/');
+        // Path should be /product/:id. So ID is last part.
+        const pathId = pathParts[pathParts.length - 1];
+        if (pathId && pathId !== 'product') {
+             refreshProduct(pathId);
+        }
+    }
+  }, [product?.id, refreshProduct]);
 
   // Display exactly what is available in product.images. 
   // No automatic duplication/repeating logic.
@@ -76,11 +96,21 @@ const ProductDetailsPage: React.FC = () => {
   const [touchStart, setTouchStart] = useState(0);
   const [touchEnd, setTouchEnd] = useState(0);
 
+  // Helper to generate SKU for DataLayer
+  const generateSKU = (name: string, size: string): string => {
+      if (!name) return 'UNKNOWN';
+      const namePart = name.split(' ')[0].toUpperCase().replace(/[^A-Z0-9]/g, ''); 
+      const sizePart = size === 'Free' ? 'FREE' : size.toUpperCase();
+      return `SAZO-${namePart}-${sizePart}`;
+  };
+
   useEffect(() => {
     if (product) {
         setCurrentImageIndex(0);
         const productSizes = product.sizes || [];
         const isFreeSize = productSizes.length === 1 && productSizes[0] === 'Free';
+        const initialSize = isFreeSize ? 'Free' : (productSizes.length > 0 ? productSizes[0] : 'Free');
+        
         setSelectedSize(isFreeSize ? 'Free' : null);
         
         window.dataLayer = window.dataLayer || [];
@@ -92,7 +122,7 @@ const ProductDetailsPage: React.FC = () => {
             ecommerce: {
                 currency: 'BDT',
                 items: [{
-                    item_id: product.id,
+                    item_id: generateSKU(product.name, initialSize), // Use SKU
                     item_name: product.name,
                     item_category: product.category,
                     price: product.price
