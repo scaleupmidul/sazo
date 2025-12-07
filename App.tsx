@@ -1,3 +1,4 @@
+
 import React, { useEffect, Suspense } from 'react';
 import { useAppStore } from './store';
 import Header from './components/Header';
@@ -6,17 +7,17 @@ import Notification from './components/Notification';
 import WhatsAppButton from './components/WhatsAppButton';
 import PageLoader from './components/PageLoader';
 
-// Static Imports for Instant Navigation (Customer Pages)
-import HomePage from './pages/HomePage';
-import ShopPage from './pages/ShopPage';
-import ProductDetailsPage from './pages/ProductDetailsPage';
-import CartPage from './pages/CartPage';
-import CheckoutPage from './pages/CheckoutPage';
-import ContactPage from './pages/ContactPage';
-import PolicyPage from './pages/PolicyPage';
-import ThankYouPage from './pages/ThankYouPage';
+// FULL LAZY LOADING: Split every page into its own chunk to minimize initial bundle size
+const HomePage = React.lazy(() => import('./pages/HomePage'));
+const ShopPage = React.lazy(() => import('./pages/ShopPage'));
+const ProductDetailsPage = React.lazy(() => import('./pages/ProductDetailsPage'));
+const CartPage = React.lazy(() => import('./pages/CartPage'));
+const CheckoutPage = React.lazy(() => import('./pages/CheckoutPage'));
+const ContactPage = React.lazy(() => import('./pages/ContactPage'));
+const PolicyPage = React.lazy(() => import('./pages/PolicyPage'));
+const ThankYouPage = React.lazy(() => import('./pages/ThankYouPage'));
 
-// Lazy Load Admin Pages to reduce bundle size for customers
+// Admin Pages (Already Lazy)
 const AdminLoginPage = React.lazy(() => import('./pages/admin/AdminLoginPage'));
 const AdminLayout = React.lazy(() => import('./pages/admin/AdminLayout'));
 const AdminDashboardPage = React.lazy(() => import('./pages/admin/AdminDashboardPage'));
@@ -45,9 +46,7 @@ const App: React.FC = () => {
   useEffect(() => {
     const productMatch = path.match(/^\/product\/(.+)$/);
     if (productMatch) {
-        // Sanitize ID: Remove any query parameters (e.g., ?fbclid=...)
         const productId = productMatch[1].split('?')[0];
-        
         if (selectedProduct?.id === productId) {
             return;
         }
@@ -139,33 +138,40 @@ const App: React.FC = () => {
       );
     }
     
-    const productMatch = path.match(/^\/product\/(.+)$/);
-    if (productMatch) {
-      return <ProductDetailsPage />;
-    }
+    // CUSTOMER PAGES - Wrapped in Suspense for Lazy Loading
+    return (
+        <Suspense fallback={<div className="min-h-[60vh] flex items-center justify-center"><PageLoader /></div>}>
+            {(() => {
+                const productMatch = path.match(/^\/product\/(.+)$/);
+                if (productMatch) {
+                  return <ProductDetailsPage />;
+                }
 
-    const thankYouMatch = path.match(/^\/thank-you\/(.+)$/);
-    if (thankYouMatch) {
-        const orderId = thankYouMatch[1];
-        return <ThankYouPage orderId={orderId} />;
-    }
+                const thankYouMatch = path.match(/^\/thank-you\/(.+)$/);
+                if (thankYouMatch) {
+                    const orderId = thankYouMatch[1];
+                    return <ThankYouPage orderId={orderId} />;
+                }
 
-    switch (path) {
-      case '/':
-        return <HomePage />;
-      case '/shop':
-        return <ShopPage />;
-      case '/cart':
-        return <CartPage />;
-      case '/checkout':
-        return <CheckoutPage />;
-      case '/contact':
-        return <ContactPage />;
-      case '/policy':
-        return <PolicyPage />;
-      default:
-        return <HomePage />;
-    }
+                switch (path) {
+                  case '/':
+                    return <HomePage />;
+                  case '/shop':
+                    return <ShopPage />;
+                  case '/cart':
+                    return <CartPage />;
+                  case '/checkout':
+                    return <CheckoutPage />;
+                  case '/contact':
+                    return <ContactPage />;
+                  case '/policy':
+                    return <PolicyPage />;
+                  default:
+                    return <HomePage />;
+                }
+            })()}
+        </Suspense>
+    );
   };
 
   return (
@@ -176,20 +182,20 @@ const App: React.FC = () => {
             font-family: 'Inter', sans-serif;
           }
 
-          /* Hide scrollbar for IE, Edge */
+          /* Global width fix for mobile zoom issues */
+          html {
+            width: 100%;
+            overflow-x: hidden;
+          }
           body { 
             font-family: 'Inter', sans-serif; 
             color: #444;
             overflow-x: hidden;
             -ms-overflow-style: none;
+            width: 100%;
+            position: relative;
           }
 
-          /* Hide scrollbar for Firefox */
-          html {
-              scrollbar-width: none;
-          }
-          
-          /* Hide scrollbar for Chrome, Safari and Opera */
           ::-webkit-scrollbar {
               display: none;
           }
@@ -219,11 +225,6 @@ const App: React.FC = () => {
           }
           .animate-scaleIn { animation: scaleIn 0.2s ease-out forwards; }
 
-          @keyframes slideInLeft {
-              from { transform: translateX(-100%); }
-              to { transform: translateX(0); }
-          }
-
           @keyframes fadeIn {
               from { opacity: 0; }
               to { opacity: 1; }
@@ -237,7 +238,6 @@ const App: React.FC = () => {
           .animate-fadeInUp { animation: fadeInUp 0.6s ease-out both; }
 
           .text-shadow { text-shadow: 0 1px 3px rgba(0,0,0,0.3); }
-          .text-shadow-md { text-shadow: 0 2px 8px rgba(0,0,0,0.4); }
 
           @keyframes pulse-whatsapp {
             0% { box-shadow: 0 0 0 0 rgba(219, 39, 119, 0.7); }
