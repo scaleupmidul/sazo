@@ -1,3 +1,4 @@
+// components/CategoryCard.tsx
 
 import React, { useState, memo } from 'react';
 
@@ -11,7 +12,7 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ categoryName, imageUrl, onC
     const [isLoaded, setIsLoaded] = useState(false);
 
     return (
-        <div className="relative overflow-hidden rounded-lg group cursor-pointer aspect-[3.5/4] bg-stone-200" onClick={onClick}>
+        <div className="relative overflow-hidden rounded-lg group cursor-pointer aspect-[3/4] bg-stone-200" onClick={onClick}>
             {!isLoaded && (
                 <div className="absolute inset-0 bg-stone-200 animate-pulse"></div>
             )}
@@ -20,7 +21,7 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ categoryName, imageUrl, onC
                 alt={categoryName}
                 className={`object-cover w-full h-full transition-opacity duration-500 group-hover:scale-110 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
                 onLoad={() => setIsLoaded(true)}
-                loading="lazy"
+                loading="eager" // Changed to eager to prevent visual lag while scrolling
                 decoding="async"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent group-hover:bg-black/50 transition duration-300 flex items-center justify-center p-8">
