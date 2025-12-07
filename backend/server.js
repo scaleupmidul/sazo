@@ -73,22 +73,27 @@ app.use('/api', dbConnectionMiddleware);
 
 app.get('/api/page-data/home', async (req, res) => {
     try {
-        const settings = await Settings.findOne().select('-adminPassword');
+        // PERFORMANCE: Use .lean() for faster reads
+        const settings = await Settings.findOne().select('-adminPassword').lean();
         
-        // OPTIMIZATION: Only fetch the first image for the cards to reduce payload size.
-        // We use projection { images: { $slice: 1 } } which returns the doc with only the first image.
+        // OPTIMIZATION: 
+        // 1. Fetch only 1st image ({ $slice: 1 })
+        // 2. Use .lean() to return plain JSON instead of heavy Mongoose Docs
         const products = await Product.find(
             { $or: [{ isNewArrival: true }, { isTrending: true }] },
             { images: { $slice: 1 } }
-        ).sort({ displayOrder: 1, createdAt: -1 });
+        )
+        .sort({ displayOrder: 1, createdAt: -1 })
+        .lean();
 
         if (!settings) return res.status(404).json({ message: 'Settings not found' });
         
-        const settingsObj = settings.toObject();
-        delete settingsObj._id;
-        delete settingsObj.__v;
+        // Since we used lean(), settings is already a plain object, no need to call toObject()
+        // Just manually remove properties if they exist (though .select('-password') handled the password)
+        delete settings._id;
+        delete settings.__v;
 
-        res.json({ settings: settingsObj, products });
+        res.json({ settings: settings, products });
     } catch (error) {
         console.error("Home data error:", error);
         res.status(500).json({ message: 'Server Error' });
