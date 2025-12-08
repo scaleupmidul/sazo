@@ -1,5 +1,3 @@
-// vite.config.ts
-
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
@@ -12,12 +10,11 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          'react-vendor': ['react', 'react-dom'],
-          'app-utils': ['zustand', 'bcryptjs'],
-          'ui-icons': ['lucide-react'] // Split heavy icons into separate chunk to unblock main thread
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-utils': ['zustand', 'lucide-react'],
         },
       },
     },
-    chunkSizeWarningLimit: 1000,
+    chunkSizeWarningLimit: 600,
   },
 });
