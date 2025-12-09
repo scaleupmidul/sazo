@@ -1,3 +1,5 @@
+
+
 import React, { useEffect, useState } from 'react';
 import { useAppStore } from '../store';
 import { CheckCircle, ShoppingBag, ArrowRight, Copy, Printer, MapPin, CreditCard, Home } from 'lucide-react';
@@ -71,12 +73,12 @@ const ThankYouPage: React.FC<ThankYouPageProps> = ({ orderId }) => {
             window.dataLayer.push({
                 event: 'purchase',
                 ecommerce: {
-                    transaction_id: `order_${order.orderId || order.id}`, // Added prefix here
+                    transaction_id: `order_${order.orderId || order.id}`,
                     value: order.total,
                     shipping: shippingValue,
                     currency: 'BDT',
                     items: (order.cartItems || []).map(item => ({
-                        item_id: item.id,
+                        item_id: item.productId || item.id, // Use dynamic numeric ID
                         item_name: item.name,
                         price: item.price,
                         quantity: item.quantity,
