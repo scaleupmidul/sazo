@@ -267,7 +267,7 @@ export const useAppStore = create<AppState>()(
             const { cart } = get();
             const existingItem = cart.find(item => item.id === product.id && item.size === size);
             
-            // Prefer the numeric productId, fallback to the main ID if missing
+            // Prefer the numeric productId, fallback to the main ID if missing (which implies legacy product)
             const itemIdForAnalytics = product.productId || product.id;
 
             let newCart;
