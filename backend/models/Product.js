@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 
 const ProductSchema = new mongoose.Schema({
+  productId: { type: String, unique: true, sparse: true }, // Added dynamic numeric ID
   name: { type: String, required: true },
   category: { type: String, required: true },
   price: { type: Number, required: true },
@@ -33,6 +34,7 @@ ProductSchema.index({ isTrending: 1 });
 ProductSchema.index({ newArrivalDisplayOrder: 1 });
 ProductSchema.index({ trendingDisplayOrder: 1 });
 ProductSchema.index({ createdAt: -1 });
+ProductSchema.index({ productId: 1 }); // Index for the new ID
 
 
 const Product = mongoose.model('Product', ProductSchema);
