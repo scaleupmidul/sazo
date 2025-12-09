@@ -15,11 +15,11 @@ import ShopPage from './pages/ShopPage';
 import ProductDetailsPage from './pages/ProductDetailsPage';
 import CartPage from './pages/CartPage';
 import CheckoutPage from './pages/CheckoutPage';
+import ThankYouPage from './pages/ThankYouPage';
 
 // SECONDARY PAGES: Lazy loaded to save initial bundle size
 const ContactPage = React.lazy(() => import('./pages/ContactPage'));
 const PolicyPage = React.lazy(() => import('./pages/PolicyPage'));
-const ThankYouPage = React.lazy(() => import('./pages/ThankYouPage'));
 
 // ADMIN PAGES: Lazy loaded (only downloaded when accessing admin panel)
 const AdminLoginPage = React.lazy(() => import('./pages/admin/AdminLoginPage'));
@@ -153,8 +153,8 @@ const App: React.FC = () => {
       );
     }
     
-    // For customer pages, we use Suspense only for the lazy-loaded ones (Contact, Policy, ThankYou).
-    // The main pages (Home, Shop, Product, Cart, Checkout) are now static and will render instantly without a loader.
+    // For customer pages, we use Suspense only for the lazy-loaded ones (Contact, Policy).
+    // The main pages (Home, Shop, Product, Cart, Checkout, ThankYou) are now static and will render instantly without a loader.
     return (
         <Suspense fallback={<div className="min-h-[60vh] flex items-center justify-center"><PageLoader /></div>}>
             {(() => {
