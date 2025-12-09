@@ -9,15 +9,6 @@ const getTokenFromStorage = (): string | null => {
     return localStorage.getItem('sazo_admin_token');
 };
 
-// Helper to generate SKU for DataLayer
-const generateSKU = (name: string, size: string): string => {
-    if (!name) return 'UNKNOWN';
-    // Take first word of name, uppercase it, remove special chars
-    const namePart = name.split(' ')[0].toUpperCase().replace(/[^A-Z0-9]/g, ''); 
-    const sizePart = size === 'Free' ? 'FREE' : size.toUpperCase();
-    return `SAZO-${namePart}-${sizePart}`;
-};
-
 const DEFAULT_SETTINGS: AppSettings = {
     onlinePaymentInfo: '',
     onlinePaymentInfoStyles: { fontSize: '0.875rem' },
@@ -42,14 +33,14 @@ const DEFAULT_SETTINGS: AppSettings = {
 
 // Fallback Mock Data to ensure UI works even if backend fails
 const MOCK_PRODUCTS_DATA: Product[] = [
-  { id: '101', name: "Gulmohar Lawn Suit", category: "Cotton", price: 3500, description: "Pure cotton lawn three-piece with exquisite embroidery and soft dupatta. Ideal for daily wear.", fabric: "Lawn Cotton", colors: ["Pastel Pink", "Beige", "Mint"], sizes: ["S", "M", "L", "XL", "Free"], isNewArrival: true, isTrending: false, onSale: false, images: ["https://picsum.photos/seed/gulmohar/400/500", "https://picsum.photos/seed/gulmohar2/400/500", "https://picsum.photos/seed/gulmohar3/400/500"], displayOrder: 1000 },
-  { id: '102', name: "Shalimar Silk Ensemble", category: "Silk", price: 6200, description: "Elegant raw silk suit with delicate zari work. Perfect for evening occasions.", fabric: "Raw Silk", colors: ["Maroon", "Gold"], sizes: ["36", "38", "40", "42"], isNewArrival: true, isTrending: true, onSale: false, images: ["https://picsum.photos/seed/shalimar/400/500", "https://picsum.photos/seed/shalimar2/400/500", "https://picsum.photos/seed/shalimar3/400/500"], displayOrder: 1000 },
-  { id: '103', name: "Party Princess Georgette", category: "Party Wear", price: 7800, description: "Heavy georgette suit with stone embellishments. Ready for any celebration.", fabric: "Georgette", colors: ["Royal Blue", "Crimson"], sizes: ["Free"], isNewArrival: false, isTrending: true, onSale: true, images: ["https://picsum.photos/seed/georgette/400/500", "https://picsum.photos/seed/georgette2/400/500", "https://picsum.photos/seed/georgette3/400/500"], displayOrder: 1000 },
-  { id: '104', name: "Everyday Beige Cotton", category: "Cotton", price: 2800, description: "Simple yet stylish cotton suit for comfortable daily use.", fabric: "Cotton", colors: ["Beige", "Lavender"], sizes: ["38", "40", "42", "44", "46"], isNewArrival: false, isTrending: false, onSale: true, images: ["https://picsum.photos/seed/beige/400/500", "https://picsum.photos/seed/beige2/400/500", "https://picsum.photos/seed/beige3/400/500"], displayOrder: 1000 },
-  { id: '105', name: "Mogra Chiffon", category: "Party Wear", price: 5900, description: "Flowy chiffon with printed motifs and lace detailing.", fabric: "Chiffon", colors: ["White", "Yellow"], sizes: ["S", "M", "L"], isNewArrival: false, isTrending: true, onSale: false, images: ["https://picsum.photos/seed/mogra/400/500", "https://picsum.photos/seed/mogra2/400/500", "https://picsum.photos/seed/mogra3/400/500"], displayOrder: 1000 },
-  { id: '106', name: "Sapphire Lawn Print", category: "Cotton", price: 3200, description: "Vibrant printed lawn suit with comfortable cotton dupatta.", fabric: "Lawn Cotton", colors: ["Blue", "Green", "White"], sizes: ["36", "38", "40", "42", "44"], isNewArrival: true, isTrending: false, onSale: false, images: ["https://picsum.photos/seed/sapphire/400/500", "https://picsum.photos/seed/sapphire2/400/500", "https://picsum.photos/seed/sapphire3/400/500"], displayOrder: 1000 },
-  { id: '107', name: "Emerald Viscose", category: "Silk", price: 5500, description: "Smooth viscose silk blend with minimalist golden detailing.", fabric: "Viscose Silk", colors: ["Emerald", "Black"], sizes: ["M", "L", "XL"], isNewArrival: true, isTrending: true, onSale: false, images: ["https://picsum.photos/seed/emerald/400/500", "https://picsum.photos/seed/emerald2/400/500", "https://picsum.photos/seed/emerald3/400/500"], displayOrder: 1000 },
-  { id: '108', name: "Maharani Velvet", category: "Party Wear", price: 9500, description: "Luxurious velvet three-piece with heavy sequin work. Ultimate festive attire.", fabric: "Velvet", colors: ["Navy", "Wine Red"], sizes: ["38", "40", "42", "44", "Free"], isNewArrival: true, isTrending: true, onSale: true, images: ["https://picsum.photos/seed/maharani/400/500", "https://picsum.photos/seed/maharani2/400/500", "https://picsum.photos/seed/maharani3/400/500"], displayOrder: 1000 },
+  { id: '101', productId: '101', name: "Gulmohar Lawn Suit", category: "Cotton", price: 3500, description: "Pure cotton lawn three-piece with exquisite embroidery and soft dupatta. Ideal for daily wear.", fabric: "Lawn Cotton", colors: ["Pastel Pink", "Beige", "Mint"], sizes: ["S", "M", "L", "XL", "Free"], isNewArrival: true, isTrending: false, onSale: false, images: ["https://picsum.photos/seed/gulmohar/400/500", "https://picsum.photos/seed/gulmohar2/400/500", "https://picsum.photos/seed/gulmohar3/400/500"], displayOrder: 1000 },
+  { id: '102', productId: '102', name: "Shalimar Silk Ensemble", category: "Silk", price: 6200, description: "Elegant raw silk suit with delicate zari work. Perfect for evening occasions.", fabric: "Raw Silk", colors: ["Maroon", "Gold"], sizes: ["36", "38", "40", "42"], isNewArrival: true, isTrending: true, onSale: false, images: ["https://picsum.photos/seed/shalimar/400/500", "https://picsum.photos/seed/shalimar2/400/500", "https://picsum.photos/seed/shalimar3/400/500"], displayOrder: 1000 },
+  { id: '103', productId: '103', name: "Party Princess Georgette", category: "Party Wear", price: 7800, description: "Heavy georgette suit with stone embellishments. Ready for any celebration.", fabric: "Georgette", colors: ["Royal Blue", "Crimson"], sizes: ["Free"], isNewArrival: false, isTrending: true, onSale: true, images: ["https://picsum.photos/seed/georgette/400/500", "https://picsum.photos/seed/georgette2/400/500", "https://picsum.photos/seed/georgette3/400/500"], displayOrder: 1000 },
+  { id: '104', productId: '104', name: "Everyday Beige Cotton", category: "Cotton", price: 2800, description: "Simple yet stylish cotton suit for comfortable daily use.", fabric: "Cotton", colors: ["Beige", "Lavender"], sizes: ["38", "40", "42", "44", "46"], isNewArrival: false, isTrending: false, onSale: true, images: ["https://picsum.photos/seed/beige/400/500", "https://picsum.photos/seed/beige2/400/500", "https://picsum.photos/seed/beige3/400/500"], displayOrder: 1000 },
+  { id: '105', productId: '105', name: "Mogra Chiffon", category: "Party Wear", price: 5900, description: "Flowy chiffon with printed motifs and lace detailing.", fabric: "Chiffon", colors: ["White", "Yellow"], sizes: ["S", "M", "L"], isNewArrival: false, isTrending: true, onSale: false, images: ["https://picsum.photos/seed/mogra/400/500", "https://picsum.photos/seed/mogra2/400/500", "https://picsum.photos/seed/mogra3/400/500"], displayOrder: 1000 },
+  { id: '106', productId: '106', name: "Sapphire Lawn Print", category: "Cotton", price: 3200, description: "Vibrant printed lawn suit with comfortable cotton dupatta.", fabric: "Lawn Cotton", colors: ["Blue", "Green", "White"], sizes: ["36", "38", "40", "42", "44"], isNewArrival: true, isTrending: false, onSale: false, images: ["https://picsum.photos/seed/sapphire/400/500", "https://picsum.photos/seed/sapphire2/400/500", "https://picsum.photos/seed/sapphire3/400/500"], displayOrder: 1000 },
+  { id: '107', productId: '107', name: "Emerald Viscose", category: "Silk", price: 5500, description: "Smooth viscose silk blend with minimalist golden detailing.", fabric: "Viscose Silk", colors: ["Emerald", "Black"], sizes: ["M", "L", "XL"], isNewArrival: true, isTrending: true, onSale: false, images: ["https://picsum.photos/seed/emerald/400/500", "https://picsum.photos/seed/emerald2/400/500", "https://picsum.photos/seed/emerald3/400/500"], displayOrder: 1000 },
+  { id: '108', productId: '108', name: "Maharani Velvet", category: "Party Wear", price: 9500, description: "Luxurious velvet three-piece with heavy sequin work. Ultimate festive attire.", fabric: "Velvet", colors: ["Navy", "Wine Red"], sizes: ["38", "40", "42", "44", "Free"], isNewArrival: true, isTrending: true, onSale: true, images: ["https://picsum.photos/seed/maharani/400/500", "https://picsum.photos/seed/maharani2/400/500", "https://picsum.photos/seed/maharani3/400/500"], displayOrder: 1000 },
 ];
 
 export const useAppStore = create<AppState>()(
@@ -275,6 +266,10 @@ export const useAppStore = create<AppState>()(
             }
             const { cart } = get();
             const existingItem = cart.find(item => item.id === product.id && item.size === size);
+            
+            // Prefer the numeric productId, fallback to the main ID if missing
+            const itemIdForAnalytics = product.productId || product.id;
+
             let newCart;
             if (existingItem) {
                 get().notify(`Quantity updated for ${product.name} (Size: ${size})!`, 'success');
@@ -283,8 +278,13 @@ export const useAppStore = create<AppState>()(
                 );
             } else {
                 const newItem: CartItem = {
-                    id: product.id, name: product.name, price: product.price, quantity: quantity,
-                    image: product.images[0], size: size,
+                    id: product.id,
+                    productId: itemIdForAnalytics, // Persist numeric ID
+                    name: product.name,
+                    price: product.price,
+                    quantity: quantity,
+                    image: product.images[0],
+                    size: size,
                 };
                 get().notify(`${product.name} (Size: ${size}) added to cart!`, 'success');
                 newCart = [...cart, newItem];
@@ -297,7 +297,7 @@ export const useAppStore = create<AppState>()(
                 ecommerce: {
                     currency: 'BDT',
                     items: [{
-                        item_id: generateSKU(product.name, size),
+                        item_id: itemIdForAnalytics, // Dynamic numeric ID
                         item_name: product.name,
                         item_category: product.category,
                         price: product.price,
@@ -320,40 +320,43 @@ export const useAppStore = create<AppState>()(
             const quantityDifference = newQuantity - oldQuantity;
             const productDetails = products.find(p => p.id === id);
 
-            if (quantityDifference > 0 && productDetails) {
-                window.dataLayer = window.dataLayer || [];
-                window.dataLayer.push({ ecommerce: null });
-                window.dataLayer.push({
-                    event: 'add_to_cart',
-                    ecommerce: {
-                        currency: 'BDT',
-                        items: [{
-                            item_id: generateSKU(productDetails.name, size),
-                            item_name: productDetails.name,
-                            item_category: productDetails.category,
-                            price: productDetails.price,
-                            quantity: quantityDifference,
-                            item_variant: size
-                        }]
-                    }
-                });
-            } else if (quantityDifference < 0 && productDetails) {
-                 window.dataLayer = window.dataLayer || [];
-                 window.dataLayer.push({ ecommerce: null });
-                 window.dataLayer.push({
-                    event: 'remove_from_cart',
-                    ecommerce: {
-                        currency: 'BDT',
-                        items: [{
-                            item_id: generateSKU(productDetails.name, size),
-                            item_name: productDetails.name,
-                            item_category: productDetails.category,
-                            price: productDetails.price,
-                            quantity: -quantityDifference,
-                            item_variant: size
-                        }]
-                    }
-                });
+            if (productDetails) {
+                 const itemIdForAnalytics = productDetails.productId || productDetails.id;
+                 if (quantityDifference > 0) {
+                    window.dataLayer = window.dataLayer || [];
+                    window.dataLayer.push({ ecommerce: null });
+                    window.dataLayer.push({
+                        event: 'add_to_cart',
+                        ecommerce: {
+                            currency: 'BDT',
+                            items: [{
+                                item_id: itemIdForAnalytics,
+                                item_name: productDetails.name,
+                                item_category: productDetails.category,
+                                price: productDetails.price,
+                                quantity: quantityDifference,
+                                item_variant: size
+                            }]
+                        }
+                    });
+                } else if (quantityDifference < 0) {
+                     window.dataLayer = window.dataLayer || [];
+                     window.dataLayer.push({ ecommerce: null });
+                     window.dataLayer.push({
+                        event: 'remove_from_cart',
+                        ecommerce: {
+                            currency: 'BDT',
+                            items: [{
+                                item_id: itemIdForAnalytics,
+                                item_name: productDetails.name,
+                                item_category: productDetails.category,
+                                price: productDetails.price,
+                                quantity: -quantityDifference,
+                                item_variant: size
+                            }]
+                        }
+                    });
+                }
             }
 
             let newCart;
