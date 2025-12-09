@@ -1,6 +1,7 @@
+
 // pages/CartPage.tsx
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { CartItem } from '../types';
 import { ShoppingCart, Truck, X, ArrowLeft, Plus, Minus } from 'lucide-react';
 import { useAppStore } from '../store';
@@ -69,33 +70,64 @@ const CartItemComponent: React.FC<{ item: CartItem, updateCartQuantity: (id: str
 );
 
 const CartPage: React.FC = () => {
-  const { cart, updateCartQuantity, navigate, cartTotal } = useAppStore(state => ({
+  const { cart, updateCartQuantity, navigate, cartTotal, products, loading, ensureAllProductsLoaded, fullProductsLoaded } = useAppStore(state => ({
     cart: state.cart,
     updateCartQuantity: state.updateCartQuantity,
     navigate: state.navigate,
     cartTotal: state.cartTotal,
+    products: state.products,
+    loading: state.loading,
+    ensureAllProductsLoaded: state.ensureAllProductsLoaded,
+    fullProductsLoaded: state.fullProductsLoaded
   }));
 
+  const [gtmFired, setGtmFired] = useState(false);
+
+  // Ensure full product list is loaded to get correct productIds for analytics
   useEffect(() => {
-    if (cart.length > 0) {
+      if (!fullProductsLoaded) {
+          ensureAllProductsLoaded();
+      }
+  }, [fullProductsLoaded, ensureAllProductsLoaded]);
+
+  // GTM Event Trigger - Wait for product IDs to be resolved
+  useEffect(() => {
+    if (!loading && cart && cart.length > 0 && !gtmFired) {
+        
+        // Check if any cart item is missing a short numeric ID
+        const pendingIdResolution = cart.some(item => {
+            const productInStore = products.find(p => p.id === item.id);
+            const idToCheck = item.productId || productInStore?.productId || item.id;
+            // If ID looks like a Mongo ObjectID (24 hex chars) and we haven't loaded all products yet, we wait.
+            return idToCheck.length === 24 && !fullProductsLoaded;
+        });
+
+        if (pendingIdResolution) return;
+
         window.dataLayer = window.dataLayer || [];
-        window.dataLayer.push({ ecommerce: null });
+        window.dataLayer.push({ ecommerce: null }); // Clear previous ecommerce object
         window.dataLayer.push({
             event: 'view_cart',
             ecommerce: {
                 currency: 'BDT',
                 value: cartTotal,
-                items: cart.map(item => ({
-                    item_id: item.id,
-                    item_name: item.name,
-                    price: item.price,
-                    quantity: item.quantity,
-                    item_variant: item.size
-                }))
+                items: cart.map(item => {
+                    const productInStore = products.find(p => p.id === item.id);
+                    const finalId = item.productId || productInStore?.productId || item.id;
+
+                    return {
+                        item_id: finalId, // Use dynamic numeric ID
+                        item_name: item.name,
+                        price: item.price,
+                        quantity: item.quantity,
+                        item_variant: item.size
+                    };
+                })
             }
         });
+        setGtmFired(true);
     }
-  }, []);
+  }, [cart, cartTotal, loading, products, fullProductsLoaded, gtmFired]);
 
   if (cart.length === 0) {
     return (
