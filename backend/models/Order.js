@@ -4,6 +4,7 @@ import mongoose from 'mongoose';
 const CartItemSchema = new mongoose.Schema({
   // Using the original product ID from the Product model.
   id: { type: String, required: true },
+  productId: { type: String }, // Added numeric ID persistence
   name: { type: String, required: true },
   price: { type: Number, required: true },
   quantity: { type: Number, required: true },
