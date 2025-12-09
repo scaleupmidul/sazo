@@ -117,17 +117,25 @@ const SafeHTML: React.FC<{ content: string; style?: React.CSSProperties }> = ({ 
 };
 
 const CheckoutPage: React.FC = () => {
-  const { cart, cartTotal, navigate, clearCart, notify, addOrder, settings: storeSettings, loading, products } = useAppStore();
+  const { cart, cartTotal, navigate, clearCart, notify, addOrder, settings: storeSettings, loading, products, ensureAllProductsLoaded, fullProductsLoaded } = useAppStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
+  const [gtmFired, setGtmFired] = useState(false);
   
+  // Ensure full product list is loaded to get correct productIds for analytics
+  useEffect(() => {
+      if (!fullProductsLoaded) {
+          ensureAllProductsLoaded();
+      }
+  }, [fullProductsLoaded, ensureAllProductsLoaded]);
+
   // Robustly handle settings to prevent crashes if data is missing or malformed
   const safeSettings = useMemo(() => {
       if (!storeSettings) {
           // Return a safe default object if storeSettings is null/undefined
           return {
             codEnabled: true,
-            onlinePaymentEnabled: false, // Default to hidden if settings fail
+            onlinePaymentEnabled: true,
             shippingOptions: [],
             onlinePaymentMethods: [],
             onlinePaymentInfo: '',
@@ -137,7 +145,7 @@ const CheckoutPage: React.FC = () => {
       }
       return {
         codEnabled: storeSettings.codEnabled ?? true,
-        onlinePaymentEnabled: storeSettings.onlinePaymentEnabled ?? false, // Default to false (not disabled) if undefined
+        onlinePaymentEnabled: storeSettings.onlinePaymentEnabled ?? true, // Default to true (Enabled)
         shippingOptions: Array.isArray(storeSettings.shippingOptions) ? storeSettings.shippingOptions : [],
         onlinePaymentMethods: Array.isArray(storeSettings.onlinePaymentMethods) ? storeSettings.onlinePaymentMethods : [],
         onlinePaymentInfo: typeof storeSettings.onlinePaymentInfo === 'string' ? storeSettings.onlinePaymentInfo : '',
@@ -170,8 +178,21 @@ const CheckoutPage: React.FC = () => {
     }
   }, [loading, cart, navigate, notify]);
   
+  // GTM Event Trigger - Wait for product IDs to be resolved
   useEffect(() => {
-    if (!loading && cart && cart.length > 0) {
+    if (!loading && cart && cart.length > 0 && !gtmFired) {
+        
+        // Check if any cart item is missing a short numeric ID
+        const pendingIdResolution = cart.some(item => {
+            const productInStore = products.find(p => p.id === item.id);
+            const idToCheck = item.productId || productInStore?.productId || item.id;
+            // If ID looks like a Mongo ObjectID (24 hex chars) and we haven't loaded all products yet, we wait.
+            // This is a heuristic to prefer the short ID (e.g. "102342") over "6605a..."
+            return idToCheck.length === 24 && !fullProductsLoaded;
+        });
+
+        if (pendingIdResolution) return;
+
         window.dataLayer = window.dataLayer || [];
         window.dataLayer.push({
             event: 'begin_checkout',
@@ -179,8 +200,6 @@ const CheckoutPage: React.FC = () => {
                 currency: 'BDT',
                 value: safeCartTotal,
                 items: cart.map(item => {
-                    // Logic to ensure we use the short numeric ID if available
-                    // Fallback to finding it in the product list if missing from cart item (for legacy cart items)
                     const productInStore = products.find(p => p.id === item.id);
                     const finalId = item.productId || productInStore?.productId || item.id;
 
@@ -194,13 +213,12 @@ const CheckoutPage: React.FC = () => {
                 })
             }
         });
+        setGtmFired(true);
     }
-  }, [cart, safeCartTotal, loading, products]);
+  }, [cart, safeCartTotal, loading, products, fullProductsLoaded, gtmFired]);
   
-  // LOGIC INVERSION: 
-  // safeSettings.onlinePaymentEnabled is now treating TRUE as DISABLED (Hidden).
-  const isOnlinePaymentDisabled = safeSettings.onlinePaymentEnabled === true;
-  const isOnlinePaymentVisible = !isOnlinePaymentDisabled;
+  // LOGIC FIX: safeSettings.onlinePaymentEnabled is TRUE when ENABLED.
+  const isOnlinePaymentVisible = safeSettings.onlinePaymentEnabled;
 
   // Effect to set default form values once settings are loaded
   useEffect(() => {
@@ -482,7 +500,7 @@ const CheckoutPage: React.FC = () => {
                       </div>
                     )}
                     
-                    {/* INVERTED LOGIC: Only show if NOT Disabled (isOnlinePaymentVisible is true) */}
+                    {/* INVERTED LOGIC REMOVED: Only show if Enabled (isOnlinePaymentVisible is true) */}
                     {isOnlinePaymentVisible && (
                       <div 
                         className={`rounded-lg border transition-all duration-200 overflow-hidden ${formData.paymentMethod === 'Online' ? 'border-pink-600 bg-pink-50/30' : 'border-stone-300 bg-white'}`}
@@ -587,11 +605,6 @@ const CheckoutPage: React.FC = () => {
                 <span>Place Order</span>
              )}
           </button>
-                {!isFormValid && (
-             <p className="text-red-500 text-xs text-center mt-2 font-medium animate-pulse">
-                Fill all required fields ( সব তথ্য পূরণ করুন )
-             </p>
-          )}
         </form>
 
       </div>
