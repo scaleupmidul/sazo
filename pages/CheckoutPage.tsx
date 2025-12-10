@@ -22,7 +22,7 @@ const InputField: React.FC<{ label: string; name: string; type?: string; value: 
 );
 
 const CheckoutPageSkeleton: React.FC = () => (
-    <main className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 animate-pulse">
+    <main className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 animate-pulse">
         {/* Page Title Box */}
         <div className="h-10 bg-stone-200 rounded w-48 mx-auto mb-8"></div>
         
@@ -381,7 +381,7 @@ const CheckoutPage: React.FC = () => {
   };
 
   return (
-    <main className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 pb-16">
+    <main className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 pb-16">
       <h2 className="text-3xl sm:text-4xl font-bold text-stone-900 mb-8 text-center">Checkout</h2>
       
       {/* UPDATED GRID: Adjusted gap for standard desktop layout */}
@@ -605,7 +605,7 @@ const CheckoutPage: React.FC = () => {
                 <span>Place Order</span>
              )}
           </button>
-                {!isFormValid && (
+              {!isFormValid && (
              <p className="text-red-500 text-xs text-center mt-2 font-medium animate-pulse">
                 Fill all required fields ( সব তথ্য পূরণ করুন )
              </p>
