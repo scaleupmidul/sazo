@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { AppState, Product, CartItem, Order, OrderStatus, ContactMessage, AppSettings, AdminProductsResponse } from '../types';
@@ -244,10 +245,8 @@ export const useAppStore = create<AppState>()(
                 const freshProduct = await res.json();
                 
                 set(state => ({
-                    // Update in list if exists
                     products: state.products.map(p => p.id === freshProduct.id ? freshProduct : p),
-                    // Update selected if matching (forces re-render of details page with fresh images)
-                    selectedProduct: state.selectedProduct?.id === freshProduct.id ? freshProduct : state.selectedProduct
+                    selectedProduct: freshProduct // Fix: Always set it.
                 }));
             } catch (e) {
                 console.error("Failed to refresh product", e);
