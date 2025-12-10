@@ -1,12 +1,13 @@
 
 
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Product } from '../types';
 import { ShoppingCart, ChevronDown, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAppStore } from '../store';
 
 const ProductDetailsPageSkeleton: React.FC = () => (
-  <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 animate-pulse">
+  <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 animate-pulse">
     <div className="h-6 bg-stone-200 rounded w-32 mb-6 sm:mb-8"></div>
     <div className="lg:grid lg:grid-cols-2 lg:gap-12 bg-white p-4 sm:p-8 rounded-xl shadow-lg border border-stone-200">
       <div className="space-y-4">
@@ -182,7 +183,7 @@ const ProductDetailsPage: React.FC = () => {
   const selectedImage = images[currentImageIndex] || '';
 
   return (
-    <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-12">
+    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-12">
       <button onClick={() => navigate('/shop')} className="mb-6 sm:mb-8 flex items-center text-stone-600 hover:text-stone-900 transition text-sm w-full">
         <ChevronDown className="w-4 h-4 transform rotate-90" /> Back to Shop
       </button>
