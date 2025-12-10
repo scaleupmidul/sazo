@@ -1,4 +1,6 @@
 
+
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Product } from '../types';
 import { ShoppingCart, ChevronDown, X, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -56,36 +58,23 @@ const ProductDetailsPage: React.FC = () => {
     refreshProduct: state.refreshProduct
   }));
 
-  // Local loading state to handle refresh/direct access
-  const [isFetching, setIsFetching] = useState(true);
-
+  // FETCH FRESH DATA ON MOUNT
+  // This ensures that even if the 'products' list in the store is stale (cached),
+  // we fetch the latest images and details for the currently viewed product.
   useEffect(() => {
-    const fetchProductData = async () => {
-        // Extract ID from URL
+    // Priority 1: Use the product ID if already selected
+    if (product?.id) {
+        refreshProduct(product.id);
+    } else {
+        // Priority 2: Extract ID from URL if directly landing on page or refresh
         const pathParts = window.location.pathname.split('/');
+        // Path should be /product/:id. So ID is last part.
         const pathId = pathParts[pathParts.length - 1];
-        
-        // If we are on a valid product route (not just /product)
         if (pathId && pathId !== 'product') {
-             // If product is already loaded and matches URL, stop loading immediately
-             // (We still optionally refresh in background, but don't block UI)
-             if (product && (product.id === pathId || product.productId === pathId)) {
-                 setIsFetching(false);
-                 refreshProduct(pathId); // Background refresh
-                 return;
-             }
-             
-             // Otherwise, we need to fetch
-             setIsFetching(true);
-             await refreshProduct(pathId);
-             setIsFetching(false);
-        } else {
-             setIsFetching(false);
+             refreshProduct(pathId);
         }
-    };
-    
-    fetchProductData();
-  }, [window.location.pathname, refreshProduct]); // Re-run if URL changes (navigating between products)
+    }
+  }, [product?.id, refreshProduct]);
 
   // Display exactly what is available in product.images. 
   // No automatic duplication/repeating logic.
@@ -169,8 +158,7 @@ const ProductDetailsPage: React.FC = () => {
     }
   }
 
-  // Combined loading check: Global loading OR Local fetching AND Product is missing
-  if ((loading || isFetching) && !product) {
+  if (loading && !product) {
     return <ProductDetailsPageSkeleton />;
   }
 
