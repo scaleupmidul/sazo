@@ -20,6 +20,9 @@ const sendOrderEmailToAdmin = async (order) => {
   });
 
   const productsSubtotal = (order.cartItems || []).reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const shippingCharge = order.shippingCharge || 0;
+  const grandTotal = order.total;
+
   const itemsHtml = order.cartItems.map(item => `
     <tr>
       <td style="padding: 12px; border-bottom: 1px solid #eee;"><img src="${item.image}" width="50" style="border-radius: 4px;" /></td>
@@ -36,14 +39,38 @@ const sendOrderEmailToAdmin = async (order) => {
     subject: `🚨 New Order #${order.orderId}`,
     priority: 'high',
     html: `<div style="font-family: sans-serif; max-width: 600px; margin: auto; border: 1px solid #eee; border-radius: 12px; overflow: hidden;">
-      <div style="background: #db2777; padding: 20px; color: white; text-align: center;"><h1>New Order!</h1><p>ID: #${order.orderId}</p></div>
+      <div style="background: #db2777; padding: 20px; color: white; text-align: center;">
+        <h1 style="margin:0;">New Order!</h1>
+        <p style="margin:5px 0 0 0; opacity: 0.8;">ID: #${order.orderId}</p>
+      </div>
       <div style="padding: 20px;">
-        <h3>Customer Details</h3>
-        <p>Name: ${order.firstName}<br>Phone: ${order.phone}<br>Address: ${order.address}<br>Payment: ${order.paymentMethod}</p>
-        <table width="100%">${itemsHtml}</table>
-        <div style="text-align: right; padding: 20px; background: #f9f9f9; margin-top: 10px;">
-          <strong>Total Payable: ৳${productsSubtotal.toLocaleString()}</strong>
+        <h3 style="color: #db2777; border-bottom: 1px solid #eee; padding-bottom: 10px;">Customer Details</h3>
+        <p style="line-height: 1.6;">
+            <strong>Name:</strong> ${order.firstName}<br>
+            <strong>Phone:</strong> ${order.phone}<br>
+            <strong>Address:</strong> ${order.address}<br>
+            <strong>City/District:</strong> ${order.city || 'N/A'}<br>
+            <strong>Payment:</strong> ${order.paymentMethod === 'Online' ? 'Online Advance' : 'COD'}<br>
+            ${order.note ? `<strong>Note:</strong> <i style="color: #666;">${order.note}</i>` : ''}
+        </p>
+        
+        <h3 style="color: #db2777; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-top: 20px;">Order Items</h3>
+        <table width="100%" cellspacing="0" cellpadding="0">${itemsHtml}</table>
+        
+        <div style="text-align: right; padding: 20px; background: #fdf2f8; margin-top: 20px; border-radius: 8px;">
+          <div style="margin-bottom: 5px; color: #666; font-size: 14px;">
+            Subtotal: ৳${productsSubtotal.toLocaleString()}
+          </div>
+          <div style="margin-bottom: 10px; color: #666; font-size: 14px;">
+            Delivery Charge: ৳${shippingCharge.toLocaleString()}
+          </div>
+          <div style="font-size: 18px; font-weight: bold; color: #db2777; border-top: 1px solid #f9a8d4; pt: 10px; margin-top: 5px;">
+            Total Payable: ৳${grandTotal.toLocaleString()}
+          </div>
         </div>
+      </div>
+      <div style="background: #f9f9f9; padding: 15px; text-align: center; color: #999; font-size: 12px;">
+        SAZO Admin Portal &copy; 2026
       </div>
     </div>`
   };
