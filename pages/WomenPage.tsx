@@ -14,6 +14,20 @@ import {
 
 const PRODUCTS_PER_PAGE = 12;
 
+const HeroSkeleton = () => (
+    <section className="relative w-full aspect-[4/3] sm:aspect-[16/7] md:aspect-[16/7] lg:aspect-[16/6] xl:aspect-[16/6] bg-stone-200 animate-pulse overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-stone-200 via-stone-100 to-stone-200 animate-shimmer" style={{ backgroundSize: '200% 100%' }}></div>
+        <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-10 md:px-16 w-full h-full flex items-center">
+            <div className="max-w-xl space-y-4">
+                <div className="h-4 bg-stone-300 rounded w-24"></div>
+                <div className="h-12 bg-stone-300 rounded w-3/4"></div>
+                <div className="h-6 bg-stone-300 rounded w-1/2"></div>
+                <div className="h-12 bg-stone-300 rounded-full w-40 pt-4"></div>
+            </div>
+        </div>
+    </section>
+);
+
 const ProductCardSkeleton: React.FC = () => (
     <div className="bg-white rounded-lg border border-stone-200 overflow-hidden shadow-lg w-full h-full flex flex-col">
       <div className="aspect-[3/4] bg-stone-200 w-full animate-pulse relative" />
@@ -65,21 +79,17 @@ const WomenPage: React.FC = () => {
     }, [fullProductsLoaded, ensureAllProductsLoaded]);
 
     const womenProducts = useMemo(() => {
-        // Only show non-cosmetic items for the Women's landing page
         const base = products.filter(p => 
           p.category.toLowerCase() !== 'cosmetics'
         );
         if (activeFilter === 'All') return base;
-        
         return base.filter(p => p.category === activeFilter);
     }, [products, activeFilter]);
 
-    // Reset pagination when filter changes
     useEffect(() => {
         setCurrentPage(1);
     }, [activeFilter]);
 
-    // Scroll to grid top on page change
     useEffect(() => {
         if (currentPage > 1) {
             const element = document.getElementById('women-grid');
@@ -108,47 +118,54 @@ const WomenPage: React.FC = () => {
     const cartCount = cart.reduce((total, item) => total + item.quantity, 0);
     const cartTotal = cart.reduce((total, item) => total + (item.price * item.quantity), 0);
 
+    // --- CONDITIONALLY RENDER HERO OR SKELETON ---
+    const showHero = !loading && settings.womenHeroImage;
+
     return (
         <div className="bg-[#FFF9F9] min-h-screen relative">
-            {/* --- LUXURY HERO (Matched to CosmeticsPage Size) --- */}
-            <section className="relative w-full aspect-[4/3] sm:aspect-[16/7] md:aspect-[16/7] lg:aspect-[16/6] xl:aspect-[16/6] flex items-center overflow-hidden">
-                <div className="absolute inset-0 z-0">
-                    <picture>
-                        <source media="(max-width: 640px)" srcSet={settings.womenMobileHeroImage || "https://picsum.photos/seed/women-hero-mob/600/800"} />
-                        <img 
-                            src={settings.womenHeroImage || "https://picsum.photos/seed/women-hero-desk/1600/800"} 
-                            alt="Women's Collection Hero" 
-                            className="w-full h-full object-cover brightness-95"
-                        />
-                    </picture>
-                    <div className="absolute inset-0 bg-gradient-to-r from-stone-900/40 via-transparent to-transparent"></div>
-                </div>
+            
+            {loading ? (
+                <HeroSkeleton />
+            ) : (
+                <section className="relative w-full aspect-[4/3] sm:aspect-[16/7] md:aspect-[16/7] lg:aspect-[16/6] xl:aspect-[16/6] flex items-center overflow-hidden">
+                    <div className="absolute inset-0 z-0">
+                        <picture>
+                            <source media="(max-width: 640px)" srcSet={settings.womenMobileHeroImage} />
+                            <img 
+                                src={settings.womenHeroImage} 
+                                alt="Women's Collection Hero" 
+                                className="w-full h-full object-cover brightness-95"
+                            />
+                        </picture>
+                        <div className="absolute inset-0 bg-gradient-to-r from-stone-900/40 via-transparent to-transparent"></div>
+                    </div>
 
-                {(settings.showWomenHeroText ?? true) && (
-                    <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-10 md:px-16 w-full">
-                        <div className="max-w-xl animate-fadeInUp space-y-2 sm:space-y-4">
-                            <span className="text-pink-400 font-bold uppercase tracking-widest text-[10px] sm:text-xs mb-1 block">Exclusive Selection</span>
-                            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold text-white leading-tight drop-shadow-md">
-                                {settings.womenHeroTitle || 'Elegance In\nEvery Thread.'}
-                            </h1>
-                            <p className="text-stone-100 text-xs sm:text-lg max-w-sm leading-relaxed drop-shadow-sm">
-                                {settings.womenHeroSubtitle || 'Discover timeless silhouettes and premium fabrics designed for the modern woman.'}
-                            </p>
-                            <div className="pt-2">
-                                <button 
-                                    onClick={() => document.getElementById('women-grid')?.scrollIntoView({ behavior: 'smooth' })}
-                                    className="bg-white text-stone-900 px-6 py-2.5 sm:px-8 sm:py-3.5 rounded-full font-bold text-sm sm:text-base hover:bg-pink-600 hover:text-white transition shadow-2xl flex items-center gap-2 group"
-                                >
-                                    <span>Shop The Edit</span>
-                                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                                </button>
+                    {(settings.showWomenHeroText ?? true) && (
+                        <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-10 md:px-16 w-full">
+                            <div className="max-w-xl animate-fadeInUp space-y-2 sm:space-y-4">
+                                <span className="text-pink-400 font-bold uppercase tracking-widest text-[10px] sm:text-xs mb-1 block">Exclusive Selection</span>
+                                <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold text-white leading-tight drop-shadow-md whitespace-pre-line">
+                                    {settings.womenHeroTitle || 'Elegance In Every Thread.'}
+                                </h1>
+                                <p className="text-stone-100 text-xs sm:text-lg max-w-sm leading-relaxed drop-shadow-sm">
+                                    {settings.womenHeroSubtitle || 'Discover timeless silhouettes and premium fabrics designed for the modern woman.'}
+                                </p>
+                                <div className="pt-2">
+                                    <button 
+                                        onClick={() => document.getElementById('women-grid')?.scrollIntoView({ behavior: 'smooth' })}
+                                        className="bg-white text-stone-900 px-6 py-2.5 sm:px-8 sm:py-3.5 rounded-full font-bold text-sm sm:text-base hover:bg-pink-600 hover:text-white transition shadow-2xl flex items-center gap-2 group"
+                                    >
+                                        <span>Shop The Edit</span>
+                                        <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                )}
-            </section>
+                    )}
+                </section>
+            )}
 
-            {/* --- CATEGORY SUB-NAV (Size matched to CosmeticsPage) --- */}
+            {/* --- CATEGORY SUB-NAV --- */}
             <nav className="sticky top-16 sm:top-20 z-30 bg-white/95 backdrop-blur-md border-b border-pink-100 shadow-sm">
                 <div className="max-w-7xl mx-auto px-4 overflow-x-auto no-scrollbar scrollbar-hide">
                     <div className="flex items-center justify-between h-14 sm:h-16 gap-8 min-w-max">
