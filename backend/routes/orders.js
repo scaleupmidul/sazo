@@ -6,6 +6,7 @@ import Product from '../models/Product.js';
 import Settings from '../models/Settings.js';
 import { protect } from '../middleware/authMiddleware.js';
 import { trackGA4Event, trackMetaCAPI } from '../utils/tracking.js';
+import { sendTelegramOrderNotification } from '../utils/telegram.js';
 
 const router = express.Router();
 
@@ -364,8 +365,13 @@ router.post('/', async (req, res) => {
         console.error("Settings fetch error for tracking:", err.message);
     }
 
-    // Dispatch the alert email asynchronously in the background so it does not block the customer's checkout speed
+    // Dispatch the alert email and Telegram notification asynchronously in the background
     sendOrderEmailToAdmin(createdOrder).catch(e => console.log("Silent order email error:", e.message));
+    
+    Settings.findOne().then(currentSettings => {
+      sendTelegramOrderNotification(createdOrder, currentSettings).catch(e => console.log("Telegram notification error:", e.message));
+    }).catch(e => console.log("Settings fetch error for Telegram:", e.message));
+
     res.status(201).json(createdOrder);
   } catch (error) { res.status(400).json({ message: 'Error creating order', error: error.message }); }
 });
