@@ -484,19 +484,19 @@ const CheckoutPage: React.FC = () => {
                     >
                         {/* Header */}
                         <div className="p-5 sm:p-7 pb-4 border-b border-brand-border/40 bg-white space-y-4">
-                            <div className="flex items-center justify-between">
+                            <div className="flex items-start justify-between gap-3">
                                 <div>
-                                    <div className="flex items-center gap-2">
-                                        <h3 className="text-xl sm:text-2xl font-serif font-bold text-brand-charcoal leading-tight">
-                                            Select Delivery Region
-                                        </h3>
-                                        <span className="text-[10px] font-display font-bold px-2 py-0.5 bg-brand-offwhite text-brand-accent tracking-widest uppercase border border-brand-accent/20">
-                                            {filteredDistricts.length} Cities
-                                        </span>
-                                    </div>
+                                    <h3 className="text-xl sm:text-2xl font-serif font-bold text-brand-charcoal leading-tight">
+                                        Select Delivery Region
+                                    </h3>
                                     <p className="text-[10px] sm:text-xs text-brand-muted font-display font-semibold uppercase tracking-[0.2em] mt-1">
                                         শহর / এরিয়া নির্বাচন করুন
                                     </p>
+                                    <div className="mt-2">
+                                        <span className="inline-block text-[10px] font-display font-bold px-2 py-0.5 bg-brand-offwhite text-brand-accent tracking-widest uppercase border border-brand-accent/20">
+                                            {filteredDistricts.length} Cities
+                                        </span>
+                                    </div>
                                 </div>
                                 <button 
                                     type="button" 
@@ -504,7 +504,7 @@ const CheckoutPage: React.FC = () => {
                                         setIsDistrictModalOpen(false);
                                         setDistrictSearchQuery('');
                                     }}
-                                    className="text-brand-muted hover:text-brand-charcoal transition-colors p-2 hover:bg-brand-charcoal/5 rounded-full"
+                                    className="text-brand-muted hover:text-brand-charcoal transition-colors p-2 hover:bg-brand-charcoal/5 rounded-full flex-shrink-0"
                                     aria-label="Close modal"
                                 >
                                     <X className="w-5 h-5" />
@@ -616,7 +616,7 @@ const CheckoutPage: React.FC = () => {
         
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 xl:gap-24">
             {/* Form Side */}
-            <form onSubmit={handleSubmit} className="lg:col-span-7 space-y-10 md:space-y-16 order-2 lg:order-1">
+            <form onSubmit={handleSubmit} className="lg:col-span-7 space-y-10 md:space-y-16">
                 
                 {/* Step 1: Shipping */}
                 <section>
@@ -804,6 +804,82 @@ const CheckoutPage: React.FC = () => {
                     </div>
                 </section>
 
+                {/* Mobile / Tablet Order Summary (shows below 02. Payment and above Purchase button) */}
+                <div className="block lg:hidden my-8 sm:my-12">
+                    <div className="bg-brand-charcoal p-6 sm:p-10 text-white shadow-xl relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
+                            <ShieldCheck size={100} strokeWidth={0.5} />
+                        </div>
+                        
+                        <h3 className="font-serif text-2xl italic mb-8">Order Summary</h3>
+                        
+                        <div className={`space-y-8 mb-12 pr-2 custom-scrollbar-light ${cart.length > 2 ? 'max-h-[280px] overflow-y-auto' : 'max-h-none overflow-visible'}`}>
+                            {cart.map((item) => (
+                                <div key={`mob-${item.id}-${item.size}`} className="flex gap-6 items-center group">
+                                    <div className="w-14 h-18 flex-shrink-0 bg-white/5 overflow-hidden">
+                                        <img src={item.image} alt={item.name} className="w-full h-full object-cover opacity-80" referrerPolicy="no-referrer" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <h4 className="text-[11px] font-display font-bold uppercase tracking-[0.2em] mb-1 truncate">{item.name}</h4>
+                                        <p className="text-[9px] text-white/40 uppercase tracking-[0.3em]">{item.size} &bull; Qty: {item.quantity}</p>
+                                        <p className="text-xs font-sans mt-2 tracking-tighter">৳{(item.price * item.quantity).toLocaleString()}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="space-y-5 pt-8 border-t border-white/10">
+                            {appliedCoupon ? (
+                                <div className="flex justify-between items-center group">
+                                    <div className="flex flex-col">
+                                        <span className="text-[9px] font-display font-bold text-brand-accent uppercase tracking-[0.3em]">Code Applied</span>
+                                        <span className="text-[11px] text-white font-display font-bold uppercase tracking-widest">{appliedCoupon}</span>
+                                    </div>
+                                    <button 
+                                        type="button"
+                                        onClick={removeCoupon}
+                                        className="text-[9px] font-display font-bold text-white/40 hover:text-brand-accent uppercase tracking-widest transition-colors underline underline-offset-4"
+                                    >
+                                        Remove
+                                    </button>
+                                </div>
+                            ) : safeSettings.exitIntentPopupEnabled ? (
+                                <button 
+                                    type="button"
+                                    onClick={() => setIsCouponModalOpen(true)}
+                                    className="w-full py-3.5 border border-white/10 flex items-center justify-center gap-3 text-[10px] font-display font-bold text-white/50 uppercase tracking-[0.3em] hover:text-white hover:border-white/30 transition-all group"
+                                >
+                                    <span>Have a promo code?</span>
+                                </button>
+                            ) : null}
+                            
+                            <div className="flex justify-between items-center text-[10px] font-display font-bold uppercase tracking-[0.3em] text-white/50">
+                                <span>Collection Value</span>
+                                <span className="text-white">৳{safeCartTotal.toLocaleString()}</span>
+                            </div>
+                            
+                            {discountAmount > 0 && (
+                                <div className="flex justify-between items-center text-[10px] font-display font-bold uppercase tracking-[0.3em] text-brand-accent">
+                                    <span>Promo Discount</span>
+                                    <span>-৳{discountAmount.toLocaleString()}</span>
+                                </div>
+                            )}
+
+                            <div className="flex justify-between items-center text-[10px] font-display font-bold uppercase tracking-[0.2em] text-white/50">
+                                <span className="whitespace-nowrap">For Delivery</span>
+                                <span className={effectiveShippingCharge === 0 ? 'text-brand-accent whitespace-nowrap' : 'text-white whitespace-nowrap'}>
+                                    {effectiveShippingCharge === 0 ? 'Complimentary' : `৳${effectiveShippingCharge.toLocaleString()}`}
+                                </span>
+                            </div>
+                            
+                            <div className="mt-8 pt-8 border-t border-white/20 flex justify-between items-center">
+                                <span className="text-[10px] font-display font-black uppercase tracking-[0.4em] text-white/60">Total Payable</span>
+                                <span className="text-xl font-sans font-bold tracking-tighter">৳{totalPayable.toLocaleString()}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div className="pt-6 md:pt-8 pb-12 sm:pb-16 md:pb-20">
                     <button type="submit" disabled={isSubmitting} className="luxury-button w-full h-14 sm:h-16 md:h-18 group flex items-center justify-center gap-3.5 shadow-lg hover:shadow-xl transition-all">
                         {isSubmitting ? (
@@ -820,8 +896,8 @@ const CheckoutPage: React.FC = () => {
                 </div>
             </form>
 
-            {/* Receipt Side */}
-            <div className="lg:col-span-5 order-1 lg:order-2 pt-8 lg:pt-0">
+            {/* Receipt Side (Desktop) */}
+            <div className="hidden lg:block lg:col-span-5 pt-8 lg:pt-0">
                 <div className="lg:sticky lg:top-40 space-y-12">
                     <div className="bg-brand-charcoal p-10 md:p-14 text-white shadow-2xl relative overflow-hidden">
                         <div className="absolute top-0 right-0 p-10 opacity-5">
@@ -882,9 +958,9 @@ const CheckoutPage: React.FC = () => {
                                 </div>
                             )}
 
-                            <div className="flex justify-between items-center text-[10px] lg:text-[11px] font-display font-bold uppercase tracking-[0.3em] text-white/50">
-                                <span>Shipping</span>
-                                <span className={effectiveShippingCharge === 0 ? 'text-brand-accent' : 'text-white'}>
+                            <div className="flex justify-between items-center text-[10px] lg:text-[11px] font-display font-bold uppercase tracking-[0.2em] text-white/50">
+                                <span className="whitespace-nowrap">For Delivery</span>
+                                <span className={effectiveShippingCharge === 0 ? 'text-brand-accent whitespace-nowrap' : 'text-white whitespace-nowrap'}>
                                     {effectiveShippingCharge === 0 ? 'Complimentary' : `৳${effectiveShippingCharge.toLocaleString()}`}
                                 </span>
                             </div>
@@ -895,8 +971,6 @@ const CheckoutPage: React.FC = () => {
                             </div>
                         </div>
                     </div>
-                    
-
                 </div>
             </div>
         </div>
