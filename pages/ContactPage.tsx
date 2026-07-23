@@ -81,7 +81,7 @@ const ContactPage: React.FC = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="mt-6 sm:mt-10 text-brand-muted text-xs sm:text-sm uppercase tracking-widest leading-loose max-w-xl mx-auto px-4"
+            className="mt-4 sm:mt-10 text-brand-muted text-[10px] sm:text-sm uppercase tracking-wider sm:tracking-widest leading-relaxed sm:leading-loose max-w-xl mx-auto px-4"
           >
             Our team is dedicated to providing you with an exceptional experience. Whether you have an inquiry or simply wish to share your thoughts, we await your message.
           </motion.p>
