@@ -205,6 +205,14 @@ const AdminSettingsPage: React.FC = () => {
     const [notificationRecipients, setNotificationRecipients] = useState('');
     const [showSmtpPass, setShowSmtpPass] = useState(false);
 
+    // Telegram Bot Instant Notifications
+    const [telegramBotToken, setTelegramBotToken] = useState('');
+    const [telegramChatId, setTelegramChatId] = useState('');
+    const [telegramEnabled, setTelegramEnabled] = useState(true);
+    const [showTelegramToken, setShowTelegramToken] = useState(false);
+    const [isTestingTelegram, setIsTestingTelegram] = useState(false);
+    const [showTelegramGuide, setShowTelegramGuide] = useState(false);
+
     // --- Safety Logic: Only require confirmation if password fields have content ---
     const isPasswordModified = newPassword.length > 0 || confirmNewPassword.length > 0;
     const isSecurityTab = activeTab === 'general';
@@ -326,6 +334,11 @@ const AdminSettingsPage: React.FC = () => {
             setSmtpPass(settings.smtpPass || '');
             setSmtpSenderName(settings.smtpSenderName || 'SAZO');
             setNotificationRecipients(settings.notificationRecipients || '');
+
+            // Hydrate Telegram settings
+            setTelegramBotToken(settings.telegramBotToken || '');
+            setTelegramChatId(settings.telegramChatId || '');
+            setTelegramEnabled(settings.telegramEnabled ?? true);
         }
     }, [settings]);
 
@@ -406,6 +419,38 @@ const AdminSettingsPage: React.FC = () => {
         }]);
     };
 
+    const handleTestTelegram = async () => {
+        if (!telegramBotToken.trim() || !telegramChatId.trim()) {
+            notify("Please enter Bot Token and Chat ID first.", "error");
+            return;
+        }
+        setIsTestingTelegram(true);
+        try {
+            const token = localStorage.getItem('unique_corner_admin_token');
+            const res = await fetch('/api/settings/test-telegram', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    botToken: telegramBotToken,
+                    chatId: telegramChatId
+                })
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                notify("🔔 Test message sent! Check your Telegram phone app.", "success");
+            } else {
+                notify(data.message || "Failed to send test message.", "error");
+            }
+        } catch (err: any) {
+            notify("Error testing Telegram: " + (err.message || "Connection error"), "error");
+        } finally {
+            setIsTestingTelegram(false);
+        }
+    };
+
     const handleSave = async () => {
         // Validation: ONLY check password match and confirm text if password is actually being changed
         if (isSecurityTab && isPasswordModified) {
@@ -451,7 +496,10 @@ const AdminSettingsPage: React.FC = () => {
                 smtpUser,
                 smtpPass,
                 smtpSenderName,
-                notificationRecipients
+                notificationRecipients,
+                telegramBotToken,
+                telegramChatId,
+                telegramEnabled
             });
             setIsSaved(true);
             setConfirmSyncText('');
@@ -1291,6 +1339,129 @@ const AdminSettingsPage: React.FC = () => {
                     </div>
                 </div>
             );
+
+            case 'telegram': return (
+                <div className={cardClass}>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-100 pb-6">
+                        <CompactSectionHeader icon={MessageSquare} title="Telegram Bot Notifications" sub="Real-time Phone Ringtone & Vibration Alert (1-2s)" />
+                        <span className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-black uppercase tracking-widest border border-emerald-200">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            Instant Phone Push
+                        </span>
+                    </div>
+
+                    <div className="space-y-6">
+                        {/* Enable/Disable Toggle */}
+                        <div className="p-4 bg-stone-50 border border-stone-100 flex items-center justify-between">
+                            <div>
+                                <h4 className="text-xs font-bold text-stone-900 uppercase tracking-tight">Enable Telegram Instant Alert</h4>
+                                <p className="text-[10px] text-stone-500 mt-0.5">Receive immediate notification with loud ringtone sound on phone as soon as an order is placed.</p>
+                            </div>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                                <input 
+                                    type="checkbox" 
+                                    checked={telegramEnabled} 
+                                    onChange={e => setTelegramEnabled(e.target.checked)} 
+                                    className="sr-only peer" 
+                                />
+                                <div className="w-11 h-6 bg-stone-200 peer-focus:outline-none peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-stone-950"></div>
+                            </label>
+                        </div>
+
+                        {/* Credentials inputs */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <FormLabel>Telegram Bot Token</FormLabel>
+                                <div className="relative">
+                                    <input 
+                                        type={showTelegramToken ? 'text' : 'password'}
+                                        value={telegramBotToken} 
+                                        onChange={e => setTelegramBotToken(e.target.value)} 
+                                        placeholder="7890123456:AAFx..." 
+                                        className="w-full p-3 bg-stone-50 border border-stone-100 rounded-none text-sm text-stone-900 focus:border-black focus:ring-4 focus:ring-stone-950/5 transition-all outline-none font-bold font-admin pr-10"
+                                    />
+                                    <button 
+                                        type="button" 
+                                        onClick={() => setShowTelegramToken(!showTelegramToken)} 
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-900"
+                                    >
+                                        {showTelegramToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                    </button>
+                                </div>
+                                <p className="text-[10px] text-stone-400 font-bold uppercase tracking-wider">
+                                    Obtained from @BotFather on Telegram.
+                                </p>
+                            </div>
+
+                            <div className="space-y-2">
+                                <FormLabel>Telegram Chat ID or Group ID</FormLabel>
+                                <ProfessionalInput 
+                                    value={telegramChatId} 
+                                    onChange={e => setTelegramChatId(e.target.value)} 
+                                    placeholder="123456789 or -100123456789" 
+                                />
+                                <p className="text-[10px] text-stone-400 font-bold uppercase tracking-wider">
+                                    Your user ID or Group Chat ID. (e.g. from @userinfobot)
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Test & Guide Actions */}
+                        <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-stone-100">
+                            <button
+                                type="button"
+                                onClick={handleTestTelegram}
+                                disabled={isTestingTelegram || !telegramBotToken || !telegramChatId}
+                                className="px-6 py-3 bg-stone-950 text-white text-xs font-bold uppercase tracking-widest hover:bg-black transition-all flex items-center gap-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isTestingTelegram ? (
+                                    <>
+                                        <LoaderCircle className="w-4 h-4 animate-spin text-amber-400" />
+                                        Sending Test Notification...
+                                    </>
+                                ) : (
+                                    <>
+                                        <MessageSquare className="w-4 h-4 text-sky-400" />
+                                        Send Test Notification 🔔
+                                    </>
+                                )}
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => setShowTelegramGuide(!showTelegramGuide)}
+                                className="text-xs font-bold text-stone-600 hover:text-stone-950 underline underline-offset-4 flex items-center gap-1.5 uppercase tracking-wider"
+                            >
+                                <HelpCircle className="w-4 h-4 text-stone-400" />
+                                {showTelegramGuide ? "Hide Setup Guide" : "1-Minute Setup Guide (সহজ নিয়ম)"}
+                            </button>
+                        </div>
+
+                        {/* Step-by-Step Guide Box */}
+                        {showTelegramGuide && (
+                            <div className="p-6 bg-stone-50 border border-stone-200/80 space-y-4 animate-fadeIn">
+                                <h4 className="text-xs font-black text-stone-900 uppercase tracking-widest flex items-center gap-2">
+                                    📱 টেলিগ্রাম বোট সেটআপ করার সহজ ৪ টি ধাপ (1-Minute Setup):
+                                </h4>
+                                <ol className="space-y-3 text-xs text-stone-700 leading-relaxed list-decimal list-inside font-sans font-medium">
+                                    <li>
+                                        <b>ধাপ ১ (Bot Token তৈরি):</b> টেলিগ্রাম অ্যাপ খুলে সার্চবারে <code>@BotFather</code> লিখে সার্চ দিন। এরপর <code>/newbot</code> পাঠিয়ে যেকোনো একটি নাম ও ইউজারনেম দিন। BotFather আপনাকে একটি <b>API Token</b> দিবে (যেমন: <code>7890123456:AAFx...</code>)। সেটি কপি করে উপরের <b>Bot Token</b> বক্সে বসান।
+                                    </li>
+                                    <li>
+                                        <b>ধাপ ২ (Bot স্টার্ট করা):</b> BotFather যে বোটের লিংক দিয়েছে (t.me/your_bot_username) সেখানে ক্লিক করে টেলিগ্রামে আপনার নতুন বোটে ঢুকে <b>Start</b> বাটনে চাপ দিন।
+                                    </li>
+                                    <li>
+                                        <b>ধাপ ৩ (Chat ID বের করা):</b> টেলিগ্রাম সার্চবারে <code>@userinfobot</code> লিখে সার্চ দিন এবং <code>/start</code> সেন্ড করুন। বোটটি আপনাকে আপনার <b>Id</b> সংখ্যাটি দেখাবে (যেমন: <code>123456789</code>)। সেটি কপি করে <b>Chat ID</b> বক্সে বসান।
+                                    </li>
+                                    <li>
+                                        <b>ধাপ ৪ (টেস্ট ও সেভ):</b> এবার <b>"Send Test Notification 🔔"</b> বাটনে চাপ দিন। আপনার ফোনে টেলিগ্রামে শব্দ করে নোটিফিকেশন এসে পৌঁছাবে! এরপর নিচে <b>Push</b> বাটনে ক্লিক করে সেভ করে নিন।
+                                    </li>
+                                </ol>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
             default: return null;
         }
     };
@@ -1323,6 +1494,7 @@ const AdminSettingsPage: React.FC = () => {
                     <div className="bg-white/90 backdrop-blur-3xl p-1.5 sm:p-3 rounded-none shadow-[0_20px_50px_rgba(0,0,0,0.05)] border border-stone-100 flex lg:flex-col overflow-x-auto lg:overflow-visible scrollbar-hide gap-1 sm:gap-1.5 sticky top-20 lg:top-0">
                         <TabButtonUI label="Categories" isActive={activeTab === 'categories'} onClick={() => handleTabSwitch('categories')} icon={Tag} />
                         <TabButtonUI label="Security" isActive={activeTab === 'general'} onClick={() => handleTabSwitch('general')} icon={Shield} />
+                        <TabButtonUI label="Telegram 🔔" isActive={activeTab === 'telegram'} onClick={() => handleTabSwitch('telegram')} icon={MessageSquare} />
                         <TabButtonUI label="SMTP Email" isActive={activeTab === 'emails'} onClick={() => handleTabSwitch('emails')} icon={Mail} />
                         <TabButtonUI label="Payments" isActive={activeTab === 'payments'} onClick={() => handleTabSwitch('payments')} icon={CreditCard} />
                         <TabButtonUI label="Hero" isActive={activeTab === 'appearance'} onClick={() => handleTabSwitch('appearance')} icon={Layout} />
