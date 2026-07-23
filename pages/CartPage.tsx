@@ -250,18 +250,18 @@ const CartPage: React.FC = () => {
             <div ref={orderSummaryRef} className="bg-[#fcf8f6] rounded-none p-5 sm:p-10 md:p-12">
                 <h3 className="font-fashion text-3xl italic text-stone-900 mb-10">Order Summary</h3>
                 
-                <div className="space-y-6 text-[10px] lg:text-[11px] font-bold uppercase tracking-[0.3em] text-stone-500 mb-10 pb-10 border-b border-stone-200/50">
-                    <div className="flex justify-between">
-                        <span>Subtotal</span>
-                        <span className="text-stone-900">৳{cartTotal.toLocaleString('en-IN')}</span>
+                <div className="space-y-6 text-[10px] lg:text-[11px] font-bold uppercase tracking-[0.2em] text-stone-500 mb-10 pb-10 border-b border-stone-200/50">
+                    <div className="flex justify-between items-center">
+                        <span className="whitespace-nowrap">Subtotal</span>
+                        <span className="text-stone-900 whitespace-nowrap">৳{cartTotal.toLocaleString('en-IN')}</span>
                     </div>
-                    <div className="flex justify-between">
-                        <span>Shipping</span>
-                        <span className="text-[#b7b7b7]">Calculated later</span>
+                    <div className="flex justify-between items-center gap-2">
+                        <span className="whitespace-nowrap">For Delivery</span>
+                        <span className="text-[#b7b7b7] whitespace-nowrap text-right">At Checkout</span>
                     </div>
-                    <div className="flex justify-between text-stone-900">
-                        <span>Total (Est.)</span>
-                        <span className="text-2xl tracking-tighter">৳{cartTotal.toLocaleString('en-IN')}</span>
+                    <div className="flex justify-between items-center text-stone-900">
+                        <span className="whitespace-nowrap">Total (Est.)</span>
+                        <span className="text-2xl tracking-tighter whitespace-nowrap">৳{cartTotal.toLocaleString('en-IN')}</span>
                     </div>
                 </div>
 
