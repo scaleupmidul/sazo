@@ -34,6 +34,7 @@ router.get('/', async (req, res) => {
         delete settingsObj.smtpHost;
         delete settingsObj.smtpPort;
         delete settingsObj.notificationRecipients;
+        delete settingsObj.telegramBotToken;
         delete settingsObj._id;
         delete settingsObj.__v;
         res.json(settingsObj);
@@ -95,6 +96,59 @@ router.put('/', protect, async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(400).json({ message: 'Error updating settings', error });
+  }
+});
+
+// @desc    Test Telegram Bot Notification
+// @route   POST /api/settings/test-telegram
+// @access  Private/Admin
+router.post('/test-telegram', protect, async (req, res) => {
+  try {
+    const { botToken, chatId } = req.body;
+    
+    let targetToken = botToken;
+    let targetChatId = chatId;
+
+    if (!targetToken || !targetChatId) {
+      const settings = await Settings.findOne();
+      if (settings) {
+        targetToken = targetToken || settings.telegramBotToken;
+        targetChatId = targetChatId || settings.telegramChatId;
+      }
+    }
+
+    if (!targetToken || !targetChatId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Bot Token and Chat ID are required to send a test message.' 
+      });
+    }
+
+    const { sendTelegramMessage } = await import('../utils/telegram.js');
+
+    const now = new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' });
+    const testMessage = `🔔 <b>SAZO — TELEGRAM TEST NOTIFICATION!</b> ⚡
+━━━━━━━━━━━━━━━━━━
+✅ Your Telegram Bot connection is <b>ACTIVE & FUNCTIONAL</b>!
+
+📱 When a new order is placed on SAZO, you will receive an instant notification right here within 1-2 seconds with a loud phone ringtone alert.
+
+⏰ <b>Test Time:</b> ${now}`;
+
+    const result = await sendTelegramMessage({
+      botToken: targetToken,
+      chatId: targetChatId,
+      text: testMessage
+    });
+
+    if (result.success) {
+      res.json({ success: true, message: 'Test message sent successfully! Check your Telegram phone app.' });
+    } else {
+      res.status(400).json({ success: false, message: result.error || 'Failed to send Telegram message' });
+    }
+  } catch (error) {
+    console.error('Error testing Telegram notification:', error);
+    res.status(500).json({ success: false, message: error.message || 'Server error' });
   }
 });
 
