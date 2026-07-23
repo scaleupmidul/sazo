@@ -99,7 +99,10 @@ const SettingsSchema = new mongoose.Schema({
   smtpUser: { type: String, default: '' },
   smtpPass: { type: String, default: '' },
   smtpSenderName: { type: String, default: 'SAZO' },
-  notificationRecipients: { type: String, default: '' }
+  notificationRecipients: { type: String, default: '' },
+  telegramBotToken: { type: String, default: '' },
+  telegramChatId: { type: String, default: '' },
+  telegramEnabled: { type: Boolean, default: true }
 });
 
 const Settings = mongoose.model('Settings', SettingsSchema);
