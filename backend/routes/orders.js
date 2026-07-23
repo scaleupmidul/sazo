@@ -301,76 +301,92 @@ router.post('/', async (req, res) => {
     });
     const createdOrder = await order.save();
     
-    // Server-Side Tracking for Purchase
+    // Fetch site settings once for tracking and notifications
+    let settings = null;
     try {
-        const settings = await Settings.findOne();
-        const gaClientId = req.body.gaClientId; // Passed from frontend
-        const gaItems = cartItems.map(item => ({
-            item_id: item.productId || item.id,
-            item_name: item.name,
-            currency: 'BDT',
-            price: item.price,
-            quantity: item.quantity,
-            item_variant: item.size
-        }));
-
-        trackGA4Event('Purchase', {
-            transaction_id: createdOrder.orderId,
-            value: total,
-            currency: 'BDT',
-            shipping: shippingCharge,
-            items: gaItems
-        }, gaClientId, {
-            gaMeasurementId: settings?.gaMeasurementId,
-            gaApiSecret: settings?.gaApiSecret
-        }).catch(e => console.log("GA4 Tracking error:", e.message));
-
-        // Meta CAPI Tracking
-        const fbc = req.cookies?._fbc || req.cookies?.fbc || null;
-        const fbp = req.cookies?._fbp || req.cookies?.fbp || null;
-        const userAgent = req.headers['user-agent'];
-        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-
-        // Split name for Meta
-        const nameParts = (customerDetails?.firstName || '').split(' ');
-        const firstName = nameParts[0] || '';
-        const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
-
-        trackMetaCAPI('Purchase', {
-            transaction_id: createdOrder.orderId,
-            value: total,
-            currency: 'BDT',
-            shipping: shippingCharge,
-            content_ids: cartItems.map(i => i.productId || i.id),
-            num_items: cartItems.length
-        }, {
-            email: customerDetails.email || '',
-            phone: customerDetails.phone || '',
-            firstName,
-            lastName,
-            city: customerDetails.city || '',
-            country: 'Bangladesh',
-            external_id: gaClientId,
-            ip,
-            userAgent,
-            fbc,
-            fbp
-        }, {
-            fbPixelId: settings?.fbPixelId,
-            fbAccessToken: settings?.fbAccessToken,
-            fbTestCode: settings?.fbTestCode
-        }).catch(e => console.log("Meta CAPI error:", e.message));
-
+        settings = await Settings.findOne();
     } catch (err) {
-        console.error("Settings fetch error for tracking:", err.message);
+        console.error("Settings fetch error:", err.message);
     }
 
-    // Dispatch the alert email and Telegram notification asynchronously in the background
+    // Server-Side Tracking for Purchase
+    try {
+        if (settings) {
+            const gaClientId = req.body.gaClientId; // Passed from frontend
+            const gaItems = cartItems.map(item => ({
+                item_id: item.productId || item.id,
+                item_name: item.name,
+                currency: 'BDT',
+                price: item.price,
+                quantity: item.quantity,
+                item_variant: item.size
+            }));
+
+            trackGA4Event('Purchase', {
+                transaction_id: createdOrder.orderId,
+                value: total,
+                currency: 'BDT',
+                shipping: shippingCharge,
+                items: gaItems
+            }, gaClientId, {
+                gaMeasurementId: settings?.gaMeasurementId,
+                gaApiSecret: settings?.gaApiSecret
+            }).catch(e => console.log("GA4 Tracking error:", e.message));
+
+            // Meta CAPI Tracking
+            const fbc = req.cookies?._fbc || req.cookies?.fbc || null;
+            const fbp = req.cookies?._fbp || req.cookies?.fbp || null;
+            const userAgent = req.headers['user-agent'];
+            const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+
+            // Split name for Meta
+            const nameParts = (customerDetails?.firstName || '').split(' ');
+            const firstName = nameParts[0] || '';
+            const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
+
+            trackMetaCAPI('Purchase', {
+                transaction_id: createdOrder.orderId,
+                value: total,
+                currency: 'BDT',
+                shipping: shippingCharge,
+                content_ids: cartItems.map(i => i.productId || i.id),
+                num_items: cartItems.length
+            }, {
+                email: customerDetails.email || '',
+                phone: customerDetails.phone || '',
+                firstName,
+                lastName,
+                city: customerDetails.city || '',
+                country: 'Bangladesh',
+                external_id: gaClientId,
+                ip,
+                userAgent,
+                fbc,
+                fbp
+            }, {
+                fbPixelId: settings?.fbPixelId,
+                fbAccessToken: settings?.fbAccessToken,
+                fbTestCode: settings?.fbTestCode
+            }).catch(e => console.log("Meta CAPI error:", e.message));
+        }
+    } catch (err) {
+        console.error("Tracking error:", err.message);
+    }
+
+    // Send Telegram Notification immediately & synchronously before ending HTTP response
+    try {
+        if (settings) {
+            await sendTelegramOrderNotification(createdOrder, settings);
+        } else {
+            const freshSettings = await Settings.findOne();
+            await sendTelegramOrderNotification(createdOrder, freshSettings);
+        }
+    } catch (e) {
+        console.error("Telegram notification error:", e.message);
+    }
+
+    // Send Admin Email alert
     sendOrderEmailToAdmin(createdOrder).catch(e => console.log("Silent order email error:", e.message));
-    
-    Settings.findOne().then(currentSettings => {
-      sendTelegramOrderNotification(createdOrder, currentSettings).catch(e => console.log("Telegram notification error:", e.message));
-    }).catch(e => console.log("Settings fetch error for Telegram:", e.message));
 
     res.status(201).json(createdOrder);
   } catch (error) { res.status(400).json({ message: 'Error creating order', error: error.message }); }
