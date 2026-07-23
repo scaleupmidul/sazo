@@ -169,6 +169,9 @@ export interface AppSettings {
   smtpPass?: string;
   smtpSenderName?: string;
   notificationRecipients?: string;
+  telegramBotToken?: string;
+  telegramChatId?: string;
+  telegramEnabled?: boolean;
 }
 
 export interface AdminProductsPagination {
