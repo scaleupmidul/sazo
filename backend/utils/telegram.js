@@ -89,9 +89,6 @@ ${sizePart ? sizePart + '• ' : '• '}<b>Quantity:</b> ${item.quantity}
 <b>Phone:</b> ${order.phone}
 <b>Address:</b> ${order.address}
 <b>City/District:</b> ${order.city || 'N/A'}
-
-💳 <b>Payment:</b>
-
 <b>Method:</b> ${paymentMethodStr}
 ${order.paymentDetails?.transactionId ? `<b>Txn ID:</b> <code>${order.paymentDetails.transactionId}</code>\n<b>Sender Number:</b> <code>${order.paymentDetails.paymentNumber}</code>\n` : ''}${order.note ? `<b>Customer Note:</b> <i>${order.note}</i>\n` : ''}
 📦 <b>Ordered Items:</b>
