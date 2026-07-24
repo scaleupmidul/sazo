@@ -80,6 +80,7 @@ ${sizePart ? sizePart + '• ' : '• '}<b>Quantity:</b> ${item.quantity}
 
   const message = `🛍️ <b>SAZO | New Order Received</b>
 
+━━━━━━━━━━━━━━━━━━━━━━
 
 📋 <b>Order Information:</b>
 
