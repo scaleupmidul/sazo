@@ -79,11 +79,7 @@ ${sizePart ? sizePart + '• ' : '• '}<b>Quantity:</b> ${item.quantity}
   const paymentMethodStr = order.paymentMethod === 'Online' ? 'Online Payment' : 'Cash on Delivery (COD)';
 
   const message = `🛍️ <b>SAZO | New Order Received</b>
-
 ━━━━━━━━━━━━━━━━━━━━━━
-
-📋 <b>Order Information:</b>
-
 <b>Order ID:</b> #${order.orderId}
 <b>Order Time:</b> ${timeStr}
 
