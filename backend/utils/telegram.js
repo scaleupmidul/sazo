@@ -79,25 +79,30 @@ ${sizePart ? sizePart + '• ' : '• '}<b>Quantity:</b> ${item.quantity}
   const paymentMethodStr = order.paymentMethod === 'Online' ? 'Online Payment' : 'Cash on Delivery (COD)';
 
   const message = `🛍️ <b>SAZO | New Order Received</b>
+  
 ━━━━━━━━━━━━━━━━━━━━━━
 
 📋 <b>Order Information:</b>
+
 <b>Order ID:</b> #${order.orderId}
 <b>Order Time:</b> ${timeStr}
 
 👤 <b>Customer Information:</b>
+
 <b>Name:</b> ${customerName}
 <b>Phone:</b> ${order.phone}
 <b>Address:</b> ${order.address}
 <b>City/District:</b> ${order.city || 'N/A'}
 
 💳 <b>Payment:</b>
+
 <b>Method:</b> ${paymentMethodStr}
 ${order.paymentDetails?.transactionId ? `<b>Txn ID:</b> <code>${order.paymentDetails.transactionId}</code>\n<b>Sender Number:</b> <code>${order.paymentDetails.paymentNumber}</code>\n` : ''}${order.note ? `<b>Customer Note:</b> <i>${order.note}</i>\n` : ''}
 📦 <b>Ordered Items:</b>
 ${itemsList}
 
 💰 <b>Order Summary:</b>
+
 <b>Product Total:</b> ৳${productTotal}
 ${discount > 0 ? `<b>Discount:</b> -৳${discount.toLocaleString()}\n` : ''}<b>Delivery Charge:</b> ৳${deliveryCharge}
 
